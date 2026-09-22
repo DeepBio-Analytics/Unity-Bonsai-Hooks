@@ -7,14 +7,14 @@ This repository contains a Unity package and minimal sample project to allow the
 # Installation
 To install the interface, download the 'bonsai-interface' Unity package from this repository and open it in a new Unity project (Assets >> Import Package >> Custom Package), importing everything in the Bonsai and Packages folders. This will import the core Bonsai interface components and some required libraries.
 
-Once the import has completed, navigate to the Bonsai folder in Assets and locate the 'BonsaiInstaller' asset. Click on the asset and follow the steps in the custom inspector dialog in order.
+Once the import has completed, navigate to the Bonsai folder in Assets and locate the 'BonsaiInstaller' asset. Click on the asset to open the custom inspector. If Bonsai is already installed on the system it is detected automatically, and you can go straight to **Consolidate packages**. Otherwise, use the download and install steps at the bottom of the inspector first.
 
 ![BonsaiInstaller](Images/BonsaiInstaller.PNG)
 
-- **Download** will download a portable archive of the Bonsai exectuable in the root project folder.
-- **Install** performs first time setup of the Bonsai environment in Unity and open the Bonsai editor. Close the Bonsai editor after this step to complete installation.
-- **Launch Bonsai** will reopen the Bonsai editor.
-- **Consolidate packages** ensures that the required libraries for running a Bonsai process from a Unity instance are copied from the Bonsai environment. This step should be performed after importing any new packages in the Bonsai editor.
+- **Bonsai Path** shows the install the interface will use. It is filled in automatically from the first install found: a path set here, then `%LOCALAPPDATA%\Bonsai`, then `%ProgramFiles%\Bonsai`, then a portable copy inside the project. Type a path or use **Locate install...** to pin a specific install; clear the field to search again.
+- **Launch Bonsai** opens the Bonsai editor for the install shown above.
+- **Consolidate packages** copies the libraries required to run a Bonsai process from a Unity instance out of the Bonsai environment and into `Assets/Packages`. Editor-only assemblies (Bonsai.Editor, Bonsai.Design and anything built on it, WebView2, DockPanelSuite, ScintillaNET) are skipped, since Unity cannot load them. Perform this step after importing any new packages in the Bonsai editor.
+- **Download latest** and **Install portable copy** are only needed when no install was found. They fetch the most recent Bonsai release and set up a portable environment in the root project folder. Close the Bonsai editor after the install step to complete it.
 
 # Quick start
 
@@ -34,7 +34,7 @@ Click **Launch Bonsai** and create a new Bonsai project. Add a timer node with a
 
 ```
 using UnityEngine;
-using Bonsai.Expressions;
+using Bonsai.Reactive;
 
 public class WorkflowMonitor : MonoBehaviour
 {
@@ -47,7 +47,7 @@ public class WorkflowMonitor : MonoBehaviour
         workflow = GetComponent<BonsaiWorkflow>();
 
         workflow.InjectSubscription("TimerOutput", 
-                                    typeof(PublishSubjectBuilder), 
+                                    typeof(PublishSubject), 
                                     (u) => { Debug.Log(u); });
     }
 }
