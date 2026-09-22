@@ -67,9 +67,10 @@ public class BonsaiWorkflow : MonoBehaviour
             var fromNode = WorkflowBuilder.Workflow.Add(input.From);
             WorkflowBuilder.Workflow.AddEdge(fromNode, replaceNode, new ExpressionBuilderArgument());
         }
-        WorkflowBuilder = new WorkflowBuilder(WorkflowBuilder.Workflow.ToInspectableGraph());
 
-        // Build workflow
+        // Build workflow. Wrap in inspectable builders exactly once: ExpressionBuilder.Unwrap only
+        // removes a single InspectBuilder, so a second wrap hides IRequireBuildContext elements
+        // such as subjects and they never receive a build context.
         WorkflowBuilder = new WorkflowBuilder(WorkflowBuilder.Workflow.ToInspectableGraph());
         WorkflowBuilder.Workflow.Build();
         WorkflowRuntime = WorkflowBuilder.Workflow.BuildObservable();
