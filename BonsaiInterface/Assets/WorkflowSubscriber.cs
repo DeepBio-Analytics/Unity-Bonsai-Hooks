@@ -10,6 +10,6 @@ public class WorkflowSubscriber : MonoBehaviour
 
     private void Awake()
     {
-        BonsaiWorkflow.InjectSubscription("TimerOutput", typeof(SubscribeSubjectBuilder), unit => { Debug.Log(unit); });
+        BonsaiWorkflow.InjectSubscription("TimerOutput", typeof(SubscribeSubject), unit => { Debug.Log(unit); });
     }
 }
