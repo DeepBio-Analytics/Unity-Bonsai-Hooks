@@ -1,162 +1,313 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using System.Net;
-using System.IO;
-using System.Diagnostics;
 using System;
-using System.Xml.Linq;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Xml.Linq;
+using UnityEditor;
+using UnityEngine;
 
 [CustomEditor(typeof(BonsaiInstaller))]
 public class BonsaiInstallerEditor : Editor
 {
+    // GitHub redirects this path to the newest release asset, so no version is pinned here.
+    const string BonsaiDownloadUrl = "https://github.com/bonsai-rx/bonsai/releases/latest/download/Bonsai.zip";
+
+    // Assemblies belonging to the Bonsai editor UI. These reference System.Windows.Forms, WPF and
+    // WebView2, none of which Unity can resolve, so they are never copied into Assets/Packages.
+    static readonly string[] EditorOnlyAssemblies =
+    {
+        "Bonsai.Editor", "ScintillaNET", "SVG", "SvgNet", "Markdig",
+        "YamlDotNet", "WebView2Loader", "ZedGraph", "OpenTK", "OpenTK.GLControl"
+    };
+
+    // Prefixes covering assembly families that are editor-only in their entirety.
+    static readonly string[] EditorOnlyPrefixes =
+    {
+        "Microsoft.Web.WebView2", "WeifenLuo.WinFormsUI.Docking"
+    };
+
+    static bool IsEditorOnly(string filePath)
+    {
+        var name = Path.GetFileNameWithoutExtension(filePath);
+        if (EditorOnlyPrefixes.Any(x => name.StartsWith(x, StringComparison.OrdinalIgnoreCase))) return true;
+        // Bonsai.Design, and everything built on it such as Bonsai.Design.Visualizers.
+        if (name.StartsWith("Bonsai.", StringComparison.OrdinalIgnoreCase) &&
+            name.IndexOf(".Design", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        return EditorOnlyAssemblies.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase));
+    }
+
     string RootPath()
     {
         return Application.dataPath.Replace("/Assets", "");
     }
 
+    string PortablePath()
+    {
+        return RootPath() + "/Bonsai";
+    }
+
+    string ArchivePath()
+    {
+        return RootPath() + "/Bonsai.zip";
+    }
+
+    // Install locations in priority order: the path set on the asset, the per-user install written
+    // by the Bonsai installer, a machine-wide install, then a portable copy inside the project.
+    IEnumerable<string> CandidatePaths()
+    {
+        var installer = (BonsaiInstaller)target;
+        if (!string.IsNullOrEmpty(installer.BonsaiPath)) yield return installer.BonsaiPath;
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bonsai");
+        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Bonsai");
+        yield return PortablePath();
+    }
+
+    static bool IsInstall(string path)
+    {
+        return !string.IsNullOrEmpty(path)
+            && File.Exists(Path.Combine(path, "Bonsai.exe"))
+            && File.Exists(Path.Combine(path, "Bonsai.config"));
+    }
+
+    string ResolveInstallPath()
+    {
+        return CandidatePaths().FirstOrDefault(IsInstall);
+    }
+
+    static string InstallVersion(string installPath)
+    {
+        try
+        {
+            var config = XDocument.Load(Path.Combine(installPath, "Bonsai.config"));
+            var package = config.Descendants("Package").FirstOrDefault(x => (string)x.Attribute("id") == "Bonsai");
+            return package == null ? "unknown version" : (string)package.Attribute("version");
+        }
+        catch (Exception ex)
+        {
+            return "unreadable Bonsai.config: " + ex.Message;
+        }
+    }
+
     void DownloadBonsai()
     {
-        string rootPath = RootPath();
+        if (File.Exists(ArchivePath()) &&
+            !EditorUtility.DisplayDialog("Download Bonsai", "An archive has already been downloaded. Replace it with the latest release?", "Replace", "Cancel"))
+        {
+            return;
+        }
 
-        if (!File.Exists(rootPath + "/Bonsai.zip"))
+        try
         {
-            WebClient client = new WebClient();
-            client.DownloadFile("https://github.com/bonsai-rx/bonsai/releases/download/2.8.1/Bonsai.zip", rootPath + "/Bonsai.zip");
+            EditorUtility.DisplayProgressBar("Bonsai", "Downloading the latest Bonsai release...", 0f);
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            using (var client = new WebClient())
+            {
+                client.DownloadFile(BonsaiDownloadUrl, ArchivePath());
+            }
         }
-        else
+        catch (Exception ex)
         {
-            EditorUtility.DisplayDialog("Error", "The Bonsai archive has already been downloaded.", "OK");
+            EditorUtility.DisplayDialog("Error", "Download failed: " + ex.Message, "OK");
+            return;
         }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+
+        EditorUtility.DisplayDialog("Bonsai", "Download complete.", "OK");
     }
 
     void InstallBonsai()
     {
-        string rootPath = RootPath();
-
-        if (!File.Exists(rootPath + "/Bonsai.zip"))
+        if (!File.Exists(ArchivePath()))
         {
             EditorUtility.DisplayDialog("Error", "Bonsai portable archive not found, please download.", "OK");
             return;
         }
 
-        if (EditorUtility.DisplayDialog("Install Bonsai", "The Bonsai archive will now be extracted and installed. Please close the Bonsai editor window after initialization to complete the install process.", "OK"))
+        if (IsInstall(PortablePath()))
         {
-            if (File.Exists(rootPath + "/Bonsai/Bonsai.exe"))
-            {
-                EditorUtility.DisplayDialog("Error", "A Bonsai installation already exists in the project.", "OK");
-            }
-            else
-            {
-                var extractProcess = new Process();
-                extractProcess.StartInfo.FileName = "powershell.exe";
-                extractProcess.StartInfo.Arguments = "Expand-Archive -Force " + rootPath + "/Bonsai.zip";
-                extractProcess.EnableRaisingEvents = true;
-                extractProcess.Exited += (sender, e) =>
-                {
-                    var firstLaunch = RunBonsai((sender, e) => { ConsolidatePackages(); });
-                    firstLaunch.WaitForExit();
-                };
-                extractProcess.Start();
-                extractProcess.WaitForExit();
-            }
-        }
-    }
-
-    void ConsolidatePackages()
-    {
-        string rootPath = RootPath();
-
-        if (!Directory.Exists(rootPath + "/Bonsai"))
-        {
-            EditorUtility.DisplayDialog("Error", "Bonsai directory not found. Please download and install Bonsai.", "OK");
+            EditorUtility.DisplayDialog("Error", "A portable Bonsai install already exists in the project.", "OK");
             return;
         }
 
-        // Ensure a packages folder is present
-        Directory.CreateDirectory(rootPath + "/Assets/Packages");
+        if (!EditorUtility.DisplayDialog("Install Bonsai", "The Bonsai archive will now be extracted and installed. Please close the Bonsai editor window after initialization to complete the install process.", "OK", "Cancel"))
+        {
+            return;
+        }
 
-        XDocument config = XDocument.Load(rootPath + "/Bonsai/Bonsai.config");
+        var extractProcess = new Process();
+        extractProcess.StartInfo.FileName = "powershell.exe";
+        extractProcess.StartInfo.Arguments =
+            "-NoProfile -Command \"Expand-Archive -LiteralPath '" + ArchivePath() + "' -DestinationPath '" + PortablePath() + "' -Force\"";
+        extractProcess.StartInfo.UseShellExecute = false;
+        extractProcess.StartInfo.CreateNoWindow = true;
+        extractProcess.Start();
+        extractProcess.WaitForExit();
+
+        // The first launch runs the package bootstrapper; packages are only complete once it closes.
+        var firstLaunch = RunBonsai(PortablePath(), null);
+        if (firstLaunch != null)
+        {
+            firstLaunch.WaitForExit();
+            ConsolidatePackages(PortablePath());
+        }
+    }
+
+    void ConsolidatePackages(string installPath)
+    {
+        // Ensure a packages folder is present
+        Directory.CreateDirectory(RootPath() + "/Assets/Packages");
+
+        XDocument config = XDocument.Load(Path.Combine(installPath, "Bonsai.config"));
         var assemblyQuery = from c in config.Descendants("AssemblyLocation")
                             where c.Attribute("location").Value.Contains(".dll")
-                            select $"{rootPath}/Bonsai/{c.Attribute("location").Value}";
+                            select Path.Combine(installPath, c.Attribute("location").Value);
 
         var libraryQuery = from c in config.Descendants("LibraryFolder")
                            where c.Attribute("platform").Value.Equals("x64")
-                           select Directory.EnumerateFiles($"{rootPath}/Bonsai/{c.Attribute("path").Value}");
+                           let folder = Path.Combine(installPath, c.Attribute("path").Value)
+                           where Directory.Exists(folder)
+                           select Directory.EnumerateFiles(folder);
 
         var allQueries = assemblyQuery.Concat(libraryQuery.SelectMany(x => x));
+        var copied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var skipped = 0;
 
         foreach (string fromFile in allQueries)
         {
-            string toFile = $"{rootPath}/Assets/Packages/{Path.GetFileName(fromFile)}";
+            string fileName = Path.GetFileName(fromFile);
+
+            if (IsEditorOnly(fromFile))
+            {
+                skipped++;
+                continue;
+            }
+
+            // Managed assemblies are listed first. A native library of the same name (WebView2 ships
+            // both) must not overwrite one, or Unity cannot resolve references against it.
+            if (!copied.Add(fileName))
+            {
+                UnityEngine.Debug.Log($"Skipping {fromFile}, {fileName} was already copied.");
+                skipped++;
+                continue;
+            }
+
+            string toFile = $"{RootPath()}/Assets/Packages/{fileName}";
             UnityEngine.Debug.Log($"Copying {fromFile} to {toFile}");
             File.Copy(fromFile, toFile, true);
         }
 
-        EditorUtility.DisplayDialog("Bonsai", "Package consolidation complete. See debug console for details.", "OK");
+        AssetDatabase.Refresh();
+        EditorUtility.DisplayDialog("Bonsai", $"Package consolidation complete. Copied {copied.Count} files, skipped {skipped}. See debug console for details.", "OK");
     }
 
-    Process RunBonsai(EventHandler onExit)
+    Process RunBonsai(string installPath, EventHandler onExit)
     {
-        string rootPath = RootPath();
+        string executablePath = Path.Combine(installPath, "Bonsai.exe");
 
-        if (File.Exists(rootPath + "/Bonsai/Bonsai.exe"))
+        if (!File.Exists(executablePath))
         {
-            var launchProcess = new Process();
-            launchProcess.StartInfo.FileName = "powershell.exe";
-            launchProcess.StartInfo.Arguments = "Bonsai/Bonsai.exe";
+            EditorUtility.DisplayDialog("Error", $"No Bonsai executable could be found at {installPath}.", "OK");
+            return null;
+        }
+
+        var launchProcess = new Process();
+        launchProcess.StartInfo.FileName = executablePath;
+        launchProcess.StartInfo.WorkingDirectory = installPath;
+        if (onExit != null)
+        {
             launchProcess.EnableRaisingEvents = true;
             launchProcess.Exited += onExit;
-            launchProcess.Start();
-            return launchProcess;
         }
-        else
-        {
-            EditorUtility.DisplayDialog("Error", "No Bonsai executable could be found, please ensure Bonsai is downloaded and installed.", "OK");
-        }
-
-        return null;
+        launchProcess.Start();
+        return launchProcess;
     }
 
     public override void OnInspectorGUI()
     {
-        base.OnInspectorGUI();
         GUI.skin.label.wordWrap = true;
+
+        serializedObject.Update();
+        var pathProperty = serializedObject.FindProperty("BonsaiPath");
+
+        // Show the install actually in use, so the field does not look like it still needs filling
+        // in. A detected path is only displayed: nothing is written to the asset unless the user
+        // edits the field or picks a folder, since the path is specific to this machine.
+        string installPath = ResolveInstallPath();
+        string storedPath = pathProperty.stringValue;
+        bool detected = string.IsNullOrEmpty(storedPath) && installPath != null;
+
+        EditorGUI.BeginChangeCheck();
+        string editedPath = EditorGUILayout.TextField(
+            new GUIContent(detected ? "Bonsai Path (detected)" : "Bonsai Path", "Detected automatically. Set this only to pin a specific install; clear it to search the standard locations again."),
+            detected ? installPath : storedPath);
+        if (EditorGUI.EndChangeCheck())
+        {
+            pathProperty.stringValue = editedPath;
+            serializedObject.ApplyModifiedProperties();
+            installPath = ResolveInstallPath();
+        }
+        if (GUILayout.Button("Locate install..."))
+        {
+            string selected = EditorUtility.OpenFolderPanel("Choose Bonsai install folder", installPath ?? "", "");
+            if (!string.IsNullOrEmpty(selected))
+            {
+                if (IsInstall(selected))
+                {
+                    pathProperty.stringValue = selected;
+                    installPath = selected;
+                }
+                else EditorUtility.DisplayDialog("Error", $"{selected} does not contain Bonsai.exe and Bonsai.config.", "OK");
+            }
+        }
+        serializedObject.ApplyModifiedProperties();
 
         GUILayout.Space(10);
 
-        // Download Bonsai
-        GUILayout.Label("Download the Bonsai portable archive.");
-        if (GUILayout.Button("Download"))
+        if (installPath == null)
+        {
+            EditorGUILayout.HelpBox("No Bonsai install found. Set a path above, or download and install a portable copy into the project.", MessageType.Warning);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox($"Using Bonsai {InstallVersion(installPath)}\n{installPath}", MessageType.Info);
+        }
+
+        GUILayout.Space(10);
+
+        using (new EditorGUI.DisabledScope(installPath == null))
+        {
+            // Launch editor
+            GUILayout.Label("Launch the Bonsai editor.");
+            if (GUILayout.Button("Launch Bonsai"))
+            {
+                RunBonsai(installPath, (sender, e) => { UnityEngine.Debug.Log("Bonsai editor closed."); });
+            }
+            GUILayout.Space(10);
+
+            // Consolidate packages
+            GUILayout.Label("Consolidate packages. This will copy the Bonsai environment packages to the Unity project, skipping the editor-only assemblies Unity cannot load. This is required to reference Bonsai components from Unity scripts and should be performed whenever new packages are added to the Bonsai environment.");
+            if (GUILayout.Button("Consolidate packages"))
+            {
+                ConsolidatePackages(installPath);
+            }
+        }
+
+        GUILayout.Space(10);
+
+        // Portable install, only needed when no other install is available
+        GUILayout.Label("Only needed when no install was found above: download the latest Bonsai release and install a portable copy inside the project.");
+        if (GUILayout.Button("Download latest"))
         {
             DownloadBonsai();
         }
-        GUILayout.Space(10);
-
-        // Extract and install
-        GUILayout.Label("Extract and perform first-time install of Bonsai.");
-        if (GUILayout.Button("Install"))
+        if (GUILayout.Button("Install portable copy"))
         {
             InstallBonsai();
-        }
-        GUILayout.Space(10);
-
-        // Launch editor
-        GUILayout.Label("Launch the Bonsai editor.");
-        if (GUILayout.Button("Launch Bonsai"))
-        {
-            RunBonsai((sender, e) => { UnityEngine.Debug.Log("Bonsai editor closed."); });
-        }
-        GUILayout.Space(10);
-
-        // Consolidate packages
-        GUILayout.Label("Consolidate packages. This will copy the Bonsai environment packages to the Unity project. This is required to reference Bonsai components from Unity scripts and should be performed whenever new packages are added to the Bonsai environment.");
-        if (GUILayout.Button("Consolidate packages"))
-        {
-            ConsolidatePackages();
         }
         GUILayout.Space(10);
     }
