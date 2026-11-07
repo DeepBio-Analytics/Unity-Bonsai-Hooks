@@ -1,4 +1,4 @@
-# unity
+# Unity Bonsai Hooks
 A Bonsai interface for the Unity real-time development platform
 
 # Introduction
