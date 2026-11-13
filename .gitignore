@@ -80,3 +80,5 @@ BonsaiInterface/Bonsai/
 BonsaiInterface/Assets/Packages.meta
 
 Release/
+
+.vscode/
