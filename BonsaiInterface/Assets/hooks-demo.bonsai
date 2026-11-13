@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WorkflowBuilder Version="2.9.1"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
+                 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Workflow>
+    <Nodes>
+      <!-- LED blink. Unity: InjectSubscription / InjectImmediateSubscription on LedOn and LedOff,
+           SetNodeProperty on this Timer's Period, GetExternalizedTimeSpan("LedOnTime").
+           For a real LED, add an Arduino DigitalOutput after LedOn (true) and LedOff (false). -->
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="rx:Timer">
+          <rx:DueTime>PT0S</rx:DueTime>
+          <rx:Period>PT1S</rx:Period>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="rx:PublishSubject">
+        <Name>LedOn</Name>
+      </Expression>
+      <Expression xsi:type="SubscribeSubject">
+        <Name>LedOn</Name>
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="DueTime" DisplayName="LedOnTime" />
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="rx:Delay">
+          <rx:DueTime>PT0.2S</rx:DueTime>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="rx:PublishSubject">
+        <Name>LedOff</Name>
+      </Expression>
+      <!-- Keystrokes. Unity: SendToSubject pushes each key into UnityKey; InjectSubscription reads KeyEcho. -->
+      <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:String">
+        <rx:Name>UnityKey</rx:Name>
+      </Expression>
+      <Expression xsi:type="SubscribeSubject">
+        <Name>UnityKey</Name>
+      </Expression>
+      <Expression xsi:type="rx:PublishSubject">
+        <Name>KeyEcho</Name>
+      </Expression>
+      <!-- Slider. Unity: InjectInput replaces SliderInput with a Unity source; InjectSubscription reads SliderEcho. -->
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="Value" DisplayName="SliderInput" />
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="FloatProperty">
+          <Value>0</Value>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="rx:PublishSubject">
+        <Name>SliderEcho</Name>
+      </Expression>
+      <!-- Trigger. In Bonsai alone the Timer fires every 3 s. Unity: ReplaceSource swaps it for the Space bar,
+           and every hook on this group passes groupPath "TrialTrigger". -->
+      <Expression xsi:type="GroupWorkflow">
+        <Name>TrialTrigger</Name>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Timer">
+                <rx:DueTime>PT3S</rx:DueTime>
+                <rx:Period>PT3S</rx:Period>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject">
+              <Name>Trigger</Name>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+    </Nodes>
+    <Edges>
+      <Edge From="0" To="1" Label="Source1" />
+      <Edge From="2" To="4" Label="Source1" />
+      <Edge From="3" To="4" Label="Source2" />
+      <Edge From="4" To="5" Label="Source1" />
+      <Edge From="7" To="8" Label="Source1" />
+      <Edge From="9" To="10" Label="Source1" />
+      <Edge From="10" To="11" Label="Source1" />
+    </Edges>
+  </Workflow>
+</WorkflowBuilder>

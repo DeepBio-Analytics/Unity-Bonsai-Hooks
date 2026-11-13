@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +9,20 @@ using System.Xml.Linq;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Inspector for <c>Assets/Bonsai/BonsaiInstaller.asset</c>. Shows which Bonsai install is in use and
+/// whether <c>Assets/Packages</c> has every DLL in <c>RequiredDlls.txt</c> (see <see cref="BonsaiDllCheck"/>),
+/// and has buttons to launch the Bonsai editor, consolidate packages, and download or install a portable copy.
+/// </summary>
+/// <remarks>
+/// <b>Consolidate packages</b> reads the install's <c>Bonsai.config</c> and copies every runtime assembly and
+/// x64 native library into <c>Assets/Packages</c>, skipping the editor-only assemblies (Bonsai.Editor,
+/// Bonsai.Design and the WinForms/WPF/WebView2 libraries) that Unity can't load. It also refuses the
+/// assemblies in <c>KnownProblemAssemblies</c> (BonVision, VR, Audio, Shaders), logging an error for each.
+/// Run it after adding packages in Bonsai.
+/// Adapted from the unmaintained emotional-cities/unity package (https://github.com/emotional-cities/unity)
+/// and fixed for Bonsai 2.9; see docs/developer/Bonsai-Internals.md.
+/// </remarks>
 [CustomEditor(typeof(BonsaiInstaller))]
 public class BonsaiInstallerEditor : Editor
 {
@@ -28,6 +43,23 @@ public class BonsaiInstallerEditor : Editor
         "Microsoft.Web.WebView2", "WeifenLuo.WinFormsUI.Docking"
     };
 
+    // Assemblies (and their sub-namespaces, e.g. Bonsai.Audio.Windows) with known compatibility issues in
+    // Unity. They are never copied, and Consolidate packages reports an error for each, so a bad package
+    // is caught at install time rather than left in Assets/Packages for someone to delete by hand.
+    static readonly string[] KnownProblemAssemblies =
+    {
+        "Bonsai.BonVision", "Bonsai.VR", "Bonsai.Audio", "Bonsai.Shaders", "Bonsai.Shaders.Renderer"
+    };
+
+    // Assets/Packages checked against RequiredDlls.txt. Refreshed on selection and after consolidating,
+    // rather than every repaint, since it reads each DLL from disk.
+    BonsaiDllCheck.Result dllCheck;
+
+    void OnEnable()
+    {
+        dllCheck = BonsaiDllCheck.Run();
+    }
+
     static bool IsEditorOnly(string filePath)
     {
         var name = Path.GetFileNameWithoutExtension(filePath);
@@ -36,6 +68,14 @@ public class BonsaiInstallerEditor : Editor
         if (name.StartsWith("Bonsai.", StringComparison.OrdinalIgnoreCase) &&
             name.IndexOf(".Design", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         return EditorOnlyAssemblies.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    static bool IsKnownProblem(string filePath)
+    {
+        var name = Path.GetFileNameWithoutExtension(filePath);
+        return KnownProblemAssemblies.Any(x =>
+            string.Equals(x, name, StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith(x + ".", StringComparison.OrdinalIgnoreCase));
     }
 
     string RootPath()
@@ -128,6 +168,7 @@ public class BonsaiInstallerEditor : Editor
             return;
         }
 
+
         if (IsInstall(PortablePath()))
         {
             EditorUtility.DisplayDialog("Error", "A portable Bonsai install already exists in the project.", "OK");
@@ -176,6 +217,7 @@ public class BonsaiInstallerEditor : Editor
         var allQueries = assemblyQuery.Concat(libraryQuery.SelectMany(x => x));
         var copied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var skipped = 0;
+        var flagged = new List<string>();
 
         foreach (string fromFile in allQueries)
         {
@@ -196,13 +238,25 @@ public class BonsaiInstallerEditor : Editor
                 continue;
             }
 
+            if (IsKnownProblem(fromFile))
+            {
+                flagged.Add(fileName);
+                UnityEngine.Debug.LogError($"{fileName} has known compatibility issues in Unity and was not copied to Assets/Packages. Remove its package from the Bonsai environment, or check that no workflow Unity runs uses its nodes.");
+                skipped++;
+                continue;
+            }
+
             string toFile = $"{RootPath()}/Assets/Packages/{fileName}";
             UnityEngine.Debug.Log($"Copying {fromFile} to {toFile}");
             File.Copy(fromFile, toFile, true);
         }
 
         AssetDatabase.Refresh();
-        EditorUtility.DisplayDialog("Bonsai", $"Package consolidation complete. Copied {copied.Count} files, skipped {skipped}. See debug console for details.", "OK");
+        dllCheck = BonsaiDllCheck.Run();
+        var flaggedNote = flagged.Count == 0
+            ? ""
+            : $"\n\nERROR: not copied (known Unity compatibility issues). Remove these packages from the Bonsai environment:\n{string.Join("\n", flagged)}";
+        EditorUtility.DisplayDialog("Bonsai", $"Package consolidation complete. Copied {copied.Count} files, skipped {skipped}. See debug console for details.\n\n{dllCheck.Summary()}{flaggedNote}", "OK");
     }
 
     Process RunBonsai(string installPath, EventHandler onExit)
@@ -277,6 +331,9 @@ public class BonsaiInstallerEditor : Editor
             EditorGUILayout.HelpBox($"Using Bonsai {InstallVersion(installPath)}\n{installPath}", MessageType.Info);
         }
 
+        EditorGUILayout.HelpBox(dllCheck.Summary(),
+            dllCheck.HasErrors ? MessageType.Error : dllCheck.HasWarnings ? MessageType.Warning : MessageType.Info);
+
         GUILayout.Space(10);
 
         using (new EditorGUI.DisabledScope(installPath == null))
@@ -312,3 +369,4 @@ public class BonsaiInstallerEditor : Editor
         GUILayout.Space(10);
     }
 }
+#endif
