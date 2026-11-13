@@ -89,6 +89,9 @@ You now have a folder such as `C:\Projects\unity-dev-unity6\`. The Unity project
 2. Select the **`BonsaiInterface`** folder (not the folder above it) and click **Open** or **Add Project**.
 3. The project appears in the list. If a warning says the editor version **6000.6.0f1** is missing, click it and choose **Install**. Wait for the install to finish (this can take a while).
 4. Click the project name to open it. The first opening takes several minutes.
+5. **Unity will ask whether to enter Safe Mode. This is expected.** The project doesn't include `Bonsai.Core.dll` yet (it is copied in at step 6), so the scripts can't compile and Unity reports compile errors. In the **Enter Safe Mode?** window, click **Ignore** to open the project normally. Do **not** click **Enter Safe Mode**.
+   - If the project has already opened in Safe Mode, click **Exit Safe Mode** in the Editor's top bar to leave it. Unity reports the same compile errors again; that is fine.
+   - Don't try to fix the errors yourself. Go on to step 6; consolidating the packages removes them.
 
 **What you will see:** the Unity Editor, with these windows. Their names are used throughout this guide:
 
@@ -101,7 +104,7 @@ You now have a folder such as `C:\Projects\unity-dev-unity6\`. The Unity project
 | **Console** | bottom, tab next to Project | Messages and errors. If you can't see it: **Window › General › Console** (Ctrl+Shift+C) |
 | Play button ▶ | top centre | Starts and stops the scene |
 
-**Messages in the Console now are expected:** a yellow warning that says `Missing Bonsai DLLs in Assets/Packages` means Unity doesn't have Bonsai's files yet. Step 6 fixes it. Red errors that mention `Bonsai` or `System.Reactive` mean the same thing.
+**Messages in the Console now are expected:** a yellow warning that says `Missing Bonsai DLLs in Assets/Packages` means Unity doesn't have Bonsai's files yet. Step 6 fixes it. Red errors that mention `Bonsai` or `System.Reactive` (the ones that triggered the Safe Mode prompt) mean the same thing.
 
 > **Screenshot to add:** `Images/unity-windows.png`: the Unity Editor with the Hierarchy, Scene, Inspector, Project and Console windows labelled.
 

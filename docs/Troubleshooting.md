@@ -8,6 +8,7 @@ Long technical text under every Console message (lines starting `UnityEngine.Deb
 
 | Message or symptom | Go to |
 |---|---|
+| Unity asks to **Enter Safe Mode** when opening the project | [Missing DLLs](#missing-bonsai-dlls) |
 | `Missing Bonsai DLLs in Assets/Packages: ...` | [Missing DLLs](#missing-bonsai-dlls) |
 | `Bonsai DLL versions differ from ...` | [Different DLL versions](#different-dll-versions) |
 | Red errors about `Bonsai` or `System.Reactive` "could not be found" | [Missing DLLs](#missing-bonsai-dlls) |
@@ -32,6 +33,8 @@ Long technical text under every Console message (lines starting `UnityEngine.Deb
 ## Missing Bonsai DLLs
 
 Unity doesn't have a copy of one or more of Bonsai's files. Nodes from a missing file still load, but they **silently do nothing**, so fix this before anything else.
+
+On a fresh project, `Bonsai.Core.dll` is missing, so Unity reports compile errors and offers **Enter Safe Mode** when it opens. Click **Ignore** (or **Exit Safe Mode** if it is already in Safe Mode), then follow the steps below.
 
 1. Make sure the Bonsai packages your workflow uses are installed in **Bonsai** (Start menu › Bonsai › **Manage packages** › **Installed** tab). Install any that are missing, then close Bonsai.
 2. In Unity, select **Assets › Bonsai › BonsaiInstaller** in the Project window.
