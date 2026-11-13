@@ -44,6 +44,9 @@ To add it to **your own** Unity project, copy the folder `BonsaiInterface/Assets
 | `Installer/` | `BonsaiInstaller` and its inspector, `BonsaiDllCheck`. In their own Editor-only assembly with no Bonsai references, so they compile even before any Bonsai DLL is in the project. |
 | `RequiredDlls.txt` | The DLLs your workflows need (see [Checking the DLLs](#checking-the-dlls)). |
 
+> :warning The project doesn't ship `Bonsai.Core.dll`, so the first time you open it Unity reports compile errors and asks whether to enter **Safe Mode**. 
+> Choose **Ignore** (or click **Exit Safe Mode** if it already opened in Safe Mode) and continue with the steps below; consolidating the packages  resolves the errors.
+
 Once the import has completed, navigate to the Bonsai folder in Assets and locate the 'BonsaiInstaller' asset. Click on the asset to open the custom inspector. If Bonsai is already installed on the system it is detected automatically, and you can go straight to **Consolidate packages**. Otherwise, use the download and install steps at the bottom of the inspector first.
 
 ![BonsaiInstaller](Images/BonsaiInstaller.PNG)
