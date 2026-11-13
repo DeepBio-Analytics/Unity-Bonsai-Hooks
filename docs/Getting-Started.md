@@ -74,14 +74,14 @@ Use the **same Bonsai version on every computer** that runs your project. A work
 
 Until the Unity 6 work is merged, it lives on the `dev-unity6` branch.
 
-1. Go to [github.com/mk-mccann/unity](https://github.com/mk-mccann/unity).
+1. Go to [github.com/DeepBio-Analytics/Unity-Bonsai-Hooks](https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks).
 2. Click the branch button (it says **main**) above the file list and choose **dev-unity6**.
 3. Click the green **Code** button, then **Download ZIP**.
 4. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
 
-You now have a folder such as `C:\Projects\unity-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
+You now have a folder such as `C:\Projects\unity-bonsai-hooks-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
 
-> If you use Git: `git clone -b dev-unity6 https://github.com/mk-mccann/unity.git` does the same.
+> If you use Git: `git clone -b dev-unity6 https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks.git` does the same.
 
 ## 5. Open the project in Unity
 
