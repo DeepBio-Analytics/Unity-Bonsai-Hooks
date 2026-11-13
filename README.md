@@ -30,28 +30,27 @@ This is a fork of the unmaintained [emotional-cities/unity](https://github.com/e
 |---|---|
 | Windows | 10 or 11, 64-bit (Bonsai is Windows-only) |
 | Unity | 6000.6.0f1 for the sample project. The package itself is plain C# and should work in other Unity 6 versions (not tested). |
-| Bonsai | 2.9.1, the same version on every computer |
+| Bonsai | 2.9.2, the same version on every computer |
 
 # Installation
 To try the interface, open the sample project (`BonsaiInterface/`) in Unity Hub; [Getting started](docs/Getting-Started.md#4-get-this-project) shows how.
 
-To add it to **your own** Unity project, copy the folder `BonsaiInterface/Assets/Bonsai` into your project's `Assets` folder, including the `.meta` files (copy it in File Explorer while Unity is closed, or drag it into Unity's Project window). There is currently no up-to-date `.unitypackage` release; older releases of the upstream package predate the changes below.
+To add it to **your own** Unity project, copy the folder `BonsaiInterface/Assets/Bonsai` into your project's `Assets` folder, including the `.meta` files (copy it in File Explorer while Unity is closed, or drag it into Unity's Project window), and nothing else: the samples are in `Assets/Samples`, which you don't need. There is currently no up-to-date `.unitypackage` release; older releases of the upstream package predate the changes below.
 
 | Folder (in `Assets/Bonsai`) | Contents |
 |---|---|
-| (top level) | `BonsaiWorkflow`, `BonsaiDispatcher`, `BonsaiWorkflowAsset`: the runtime. They need the Bonsai DLLs. |
+| `Runtime/` | `BonsaiWorkflow`, `BonsaiDispatcher`, `BonsaiWorkflowAsset`, `UnitySignal`: the runtime. They need the Bonsai DLLs. |
+| (top level) | The `BonsaiInstaller` asset. |
 | `Editor/` | `BonsaiEditorMenu`: the **Bonsai** menu. Editor-only, so player builds don't include it. |
 | `Installer/` | `BonsaiInstaller` and its inspector, `BonsaiDllCheck`. In their own Editor-only assembly with no Bonsai references, so they compile even before any Bonsai DLL is in the project. |
 | `RequiredDlls.txt` | The DLLs your workflows need (see [Checking the DLLs](#checking-the-dlls)). |
 
-> :warning The project doesn't ship `Bonsai.Core.dll`, so the first time you open it Unity reports compile errors and asks whether to enter **Safe Mode**. 
-> Choose **Ignore** (or click **Exit Safe Mode** if it already opened in Safe Mode) and continue with the steps below; consolidating the packages  resolves the errors.
+> :warning: The project doesn't ship `Bonsai.Core.dll`, so the first time you open it Unity reports compile errors and asks whether to enter **Safe Mode**.
+> Choose **Ignore** (or click **Exit Safe Mode** if it already opened in Safe Mode) and continue with the steps below; consolidating the packages resolves the errors.
 
 Once the import has completed, navigate to the Bonsai folder in Assets and locate the 'BonsaiInstaller' asset. Click on the asset to open the custom inspector. If Bonsai is already installed on the system it is detected automatically, and you can go straight to **Consolidate packages**. Otherwise, use the download and install steps at the bottom of the inspector first.
 
 ![BonsaiInstaller](Images/BonsaiInstaller.PNG)
-
-> **Screenshot to update:** `Images/BonsaiInstaller.PNG` predates the DLL check box and should be retaken.
 
 - **Bonsai Path** shows the install the interface will use. It is filled in automatically from the first install found: a path set here, then `%LOCALAPPDATA%\Bonsai`, then `%ProgramFiles%\Bonsai`, then a portable copy inside the project. Type a path or use **Locate install...** to pin a specific install; clear the field to search again.
 - The box under it reports the [DLL check](#checking-the-dlls): all present, missing (red) or a different version (yellow).
@@ -61,6 +60,18 @@ Once the import has completed, navigate to the Bonsai folder in Assets and locat
 - **Download latest** and **Install portable copy** are only needed when no install was found. They fetch the most recent Bonsai release and set up a portable environment in the root project folder. Close the Bonsai editor after the install step to complete it.
 
 Keep one Bonsai version on every machine: a workflow saved by a newer Bonsai can fail to load against an older `Bonsai.Core.dll`. `Assets/Packages` is not in git, so each clone consolidates its own copy.
+
+## Caveats
+
+- **Windows only**, 64-bit. Bonsai doesn't run elsewhere.
+- **First open shows compile errors and a Safe Mode prompt** until the Bonsai DLLs are consolidated (see above).
+- **The Input System package is required by the samples.** The sample project uses `com.unity.inputsystem` with **Active Input Handling** set to the new handler. Your own project needs the package if you copy a script that reads `Keyboard.current`; legacy `Input.GetKey...` throws when only the new handler is active.
+- **One Bonsai version on every machine.** A workflow saved by a newer Bonsai can fail to load against an older `Bonsai.Core.dll`.
+- **Some packages don't work inside Unity.** `Bonsai.BonVision`, `Bonsai.VR`, `Bonsai.Audio` and `Bonsai.Shaders` are skipped by Consolidate packages. Nodes that need a Windows message loop, such as `KeyDown`, never fire ([Gotchas](docs/Gotchas.md#keydown-never-fires-inside-unity)).
+- **Nested workflows can't be hooked.** Only `GroupWorkflow` contents are reachable, through `groupPath`; `SelectMany` and `CreateObservable` inner workflows are not.
+- **Auto Start is the only way to start a workflow.** `HoldStart`/`ReleaseStart` can delay it, but a stopped workflow can't be restarted until you leave and re-enter Play.
+- **Player builds are untested.** The build check blocks missing DLLs, but whether a built player runs a workflow hasn't been verified, and the IL2CPP scripting backend will likely fail (Bonsai builds workflows at runtime). Use **Mono**. See [Possible extensions](docs/Extensions.md#a12-built-players).
+- **Workflow assets are snapshots.** After editing a `.bonsai` file, refresh the asset with **Bonsai › Create Bonsai workflow asset › Overwrite**.
 
 ## Checking the DLLs
 
@@ -77,7 +88,7 @@ Each line of `RequiredDlls.txt` is `<dll> <version> <comment>`, with versions as
 
 # Quick start
 
-This is the short version for people who already use Unity and Bonsai. [Getting started](docs/Getting-Started.md) covers the same steps in full detail.
+This is the short version for people who already use Unity and Bonsai. [Getting started](docs/Getting-Started.md) covers the same steps in full detail. It assumes you have already consolidated the packages (see [Installation](#installation) and the [caveats](#caveats)); until then Unity shows compile errors and offers Safe Mode.
 
 As a quick minimal example, we'll create a Bonsai workflow with a periodic timer that emits events every second, and then log those events to the Debug window in Unity.
 
@@ -127,13 +138,29 @@ Other hooks let Unity feed values into the workflow, replace a source node, over
 
 # Samples
 
-The project in `BonsaiInterface/` has three sample scenes. **Start with `Scenes/HooksDemo`**: it exercises every hook in one place. Press Play, click **Start**, then use the slider, letter keys and Space, and watch the LED and the on-screen log. The header of `HooksDemo.cs` maps each hook to its workflow node. Consolidate packages first (see [Installation](#installation)).
+The project in `BonsaiInterface/` has four sample scenes. **Start with `Samples/Scenes/HooksDemo`**: it exercises every hook in one place. Press Play, click **Start**, then use the slider, letter keys and Space, and watch the LED and the on-screen log. The header of `HooksDemo.cs` maps each hook to its workflow node. Consolidate packages first (see [Installation](#installation)).
+
+Everything sample-only is in `BonsaiInterface/Assets/Samples`: scenes in `Samples/Scenes/`, scripts in `Samples/Scripts/`, workflows (each `.bonsai` file and its `.bonsai.asset`) in `Samples/Workflows/`. The package itself is `Assets/Bonsai`. Keyboard input in the samples uses the Input System package (`com.unity.inputsystem`, already in the project's `Packages/manifest.json`), with **Active Input Handling** set to **Input System Package (New)**; see the [key recipe](docs/Recipes.md#stop-the-workflow-with-a-key) if your own project differs.
 
 | Scene | Workflow | Script | What it shows |
 |---|---|---|---|
-| `Scenes/HooksDemo` | `hooks-demo.bonsai`: a 1 s blink (`LedOn` → `Delay LedOnTime` → `LedOff`), a typed `UnityKey` subject echoed to `KeyEcho`, `SliderInput → FloatProperty → SliderEcho`, and a group `TrialTrigger` whose 3 s `Timer` feeds `Trigger` | `HooksDemo` | Every hook: `HoldStart`/`ReleaseStart`, `SetNodeProperty` (blink period), `GetExternalizedTimeSpan`, `InjectSubscription` and `InjectImmediateSubscription` (LED sphere), `SendToSubject` (keys), `InjectInput` (slider), `ReplaceSource` with `groupPath` (Space replaces the timer), `StopWorkflow`. Uses only `Bonsai.Core`. For a real LED, add an Arduino `DigitalOutput` after `LedOn`/`LedOff` in Bonsai. |
-| `Scenes/SampleScene` | `timer-workflow.bonsai`: `Timer(1 s) → Take(10) → PublishSubject TimerOutput`, plus a `SubscribeSubject TimerOutput` | `WorkflowSubscriber` | Bonsai to Unity. Logs the ten timer values and how long each took to reach the main thread. The two nodes named `TimerOutput` show why the type argument matters. |
-| `Scenes/InputTest` | `input-test.bonsai`: `ExternalizedMapping IntInput → IntProperty → PublishSubject IntValue` (and the same for float) | `InputInjector` | Unity to Bonsai and back. Feeds the frame count into `IntInput` with `InjectInput`, and logs what `IntValue` emits. `IntegerSource` is the pattern for any Unity-driven source, including one for `ReplaceSource`. |
+| `Samples/Scenes/HooksDemo` | `hooks-demo.bonsai`: a 1 s blink (`LedOn` → `Delay LedOnTime` → `LedOff`), a typed `UnityKey` subject echoed to `KeyEcho`, `SliderInput → FloatProperty → SliderEcho`, and a group `TrialTrigger` whose 3 s `Timer` feeds `Trigger` | `HooksDemo` | Every hook: `HoldStart`/`ReleaseStart`, `SetNodeProperty` (blink period), `GetExternalizedTimeSpan`, `InjectSubscription` and `InjectImmediateSubscription` (LED sphere), `SendToSubject` (keys), `InjectInput` (slider), `ReplaceSource` with `groupPath` (Space replaces the timer), `StopWorkflow`. Uses only `Bonsai.Core`. For a real LED, add an Arduino `DigitalOutput` after `LedOn`/`LedOff` in Bonsai. |
+| `Samples/Scenes/SampleScene` | `timer-workflow.bonsai`: `Timer(1 s) → Take(10) → PublishSubject TimerOutput`, plus a `SubscribeSubject TimerOutput` | `WorkflowSubscriber` | Bonsai to Unity. Logs the ten timer values and how long each took to reach the main thread. The two nodes named `TimerOutput` show why the type argument matters. |
+| `Samples/Scenes/InputTest` | `input-test.bonsai`: `ExternalizedMapping IntInput → IntProperty → PublishSubject IntValue` (and the same for float) | `InputInjector` | Unity to Bonsai and back. Feeds the frame count into `IntInput` with `InjectInput`, and logs what `IntValue` emits. `IntegerSource` is the pattern for any Unity-driven source, including one for `ReplaceSource`. |
+| `Samples/Scenes/ArduinoBlink` | `arduino-blink.bonsai`: `Timer(0.5 s)` → even-tick `ExpressionTransform` → `CombineLatest` with the typed `BlinkEnabled` subject → `DigitalOutput` (pin 13); the same timer feeds `TimeInterval` → Hz → `PublishSubject BlinkRate` | `ArduinoBlink` | Unity and a real Arduino, both ways. **Space** sends `true`/`false` into `BlinkEnabled` (`SendToSubject`) to start and stop the built-in LED, and Bonsai's measured blink rate comes back to the Console (`InjectSubscription`). The Inspector sets the COM port and blink period (`SetNodeProperty`). Needs an Arduino running StandardFirmata and the Bonsai Arduino and Scripting.Expressions packages consolidated; see [Arduino blink setup](#arduino-blink-setup). |
+
+## Arduino blink setup
+
+1. Upload **StandardFirmata** to the board (Arduino IDE: **File › Examples › Firmata › StandardFirmata**), then close the Arduino IDE and its Serial Monitor; they hold the port.
+2. In Bonsai, install **Bonsai - Arduino Library** and **Bonsai - Scripting Expressions** (**Manage packages**), close Bonsai, then select `Assets/Bonsai/BonsaiInstaller` in Unity and click **Consolidate packages**. If either DLL is missing, the scene logs an error at Play instead of silently doing nothing.
+3. Open `Samples/Scenes/ArduinoBlink`, select the **ArduinoBlink** object and set **Port Name** (Windows Device Manager › Ports). **Blink Period Seconds** sets the full on-and-off cycle.
+4. Press Play, wait about 2 seconds (opening the port resets the Arduino), then press **Space** in the Game view to start and stop the built-in LED. The Console shows `Blink rate: 1.0 Hz (measured by Bonsai)` while it blinks.
+
+**Without Unity:** open `arduino-blink.bonsai` in Bonsai, set `DigitalOutput`'s **PortName**, press **F5**, then press **Space**. The `KeyDown` node (a Windows keyboard hook, so it reacts to Space whichever window has focus) feeds an `ElementIndex` toggle that drives `BlinkEnabled`: the first press starts the blinking and the second stops it. Inside Unity `KeyDown` never fires ([Gotchas](docs/Gotchas.md#keydown-never-fires-inside-unity)), so the scene's Space key sends `BlinkEnabled` instead, and that part of the workflow stays idle.
+
+How it works: the workflow's `Timer` ticks once per half cycle and the LED is on for even ticks while `BlinkEnabled` is true. Bonsai measures the time between ticks and publishes the rate to `BlinkRate`. The measurement jitters by a few percent, so the script logs it to one decimal and only when it changes. The timer's period is set from the Inspector before the workflow starts. To let Unity change the rate while running, externalize the `Timer`'s `Period` and drive it with `InjectInput` (the header of `ArduinoBlink.cs` has the outline).
+
+The workflow was run headless in Bonsai 2.9.1 with the Arduino replaced by a file writer, which showed the LED alternating and the rate near 1 Hz. It hasn't been run against a physical board.
 
 # Changes from upstream
 
@@ -152,7 +179,8 @@ Changes from [emotional-cities/unity](https://github.com/emotional-cities/unity)
 | `OnDestroy` no longer throws when the workflow never started; new `StopWorkflow()` | Disposing a null subscription threw a `NullReferenceException`. |
 | `BonsaiDispatcher` clears its queue, and `BonsaiWorkflow` its registered hooks, when Play starts again | With *Enter Play Mode Options* skipping the domain reload, old callbacks were delivered to the new session and every hook was applied twice. |
 | Workflow errors are logged with `Debug.LogError` | They were plain `Debug.Log` lines and easy to miss. |
-| New hooks: timestamped `InjectSubscription`, `ReplaceSource`, `SetNodeProperty`, `HoldStart`/`ReleaseStart`, `GetExternalizedTimeSpan` | See [docs/Hook-API.md](docs/Hook-API.md). |
+| New hooks: timestamped `InjectSubscription`, `InjectImmediateSubscription`, `SendToSubject` with `UnitySignal`, `ReplaceSource`, `SetNodeProperty`, `HoldStart`/`ReleaseStart`, `GetExternalizedTimeSpan`, and an optional `groupPath` to reach nodes inside groups | See [docs/Hook-API.md](docs/Hook-API.md). |
+| Samples use the Input System package instead of the legacy `Input` class | The project's Active Input Handling is the new handler. |
 | `InjectInput` resolves its target when the workflow starts | It looked the node up immediately, so it failed unless `BonsaiWorkflow.Awake` happened to run first. It can now be called from `Awake` like the other hooks. |
 | Samples re-saved for Bonsai 2.9, register in `Awake`, scenes have Auto Start on | The scenes predated Auto Start, so it loaded as off and neither sample ran; the scripts used the obsolete `PublishSubjectBuilder`. |
 | XML documentation on every class and public member | |

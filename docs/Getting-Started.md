@@ -45,7 +45,7 @@ You still use the Bonsai program to **build and edit** workflows. Unity only **r
 | Item | Version | Notes |
 |---|---|---|
 | A Windows 10 or 11 computer | 64-bit | Bonsai only runs on Windows. |
-| Bonsai | 2.9.1 | Free, from [bonsai-rx.org](https://bonsai-rx.org/docs/articles/installation.html). |
+| Bonsai | 2.9.2 | Free, from [bonsai-rx.org](https://bonsai-rx.org/docs/articles/installation.html). |
 | Unity Hub | any recent | Free, from [unity.com/download](https://unity.com/download). It installs and opens Unity. |
 | Unity Editor | **6000.6.0f1** | Installed through Unity Hub in step 3. Use exactly this version for the sample project. |
 | A Unity account | | Free. Unity Hub asks you to sign in. |
@@ -74,14 +74,14 @@ Use the **same Bonsai version on every computer** that runs your project. A work
 
 Until the Unity 6 work is merged, it lives on the `dev-unity6` branch.
 
-1. Go to [github.com/mk-mccann/unity](https://github.com/mk-mccann/unity).
+1. Go to [github.com/DeepBio-Analytics/Unity-Bonsai-Hook](https://github.com/DeepBio-Analytics/Unity-Bonsai-Hook).
 2. Click the branch button (it says **main**) above the file list and choose **dev-unity6**.
 3. Click the green **Code** button, then **Download ZIP**.
 4. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
 
-You now have a folder such as `C:\Projects\unity-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
+You now have a folder such as `C:\Projects\Unity-Bonsai-Hook-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
 
-> If you use Git: `git clone -b dev-unity6 https://github.com/mk-mccann/unity.git` does the same.
+> If you use Git: `git clone -b dev-unity6 https://github.com/DeepBio-Analytics/Unity-Bonsai-Hook.git` does the same.
 
 ## 5. Open the project in Unity
 
@@ -116,7 +116,7 @@ Unity needs a copy of Bonsai's program files (*DLLs*). This step is called **Con
 2. Click the file **BonsaiInstaller** (its icon is a small cube). Click it once; don't double-click.
 3. Look at the **Inspector**. It shows:
    - **Bonsai Path**: the Bonsai install it found, for example `C:\Users\you\AppData\Local\Bonsai`.
-   - A box saying **Using Bonsai 2.9.1**.
+   - A box saying **Using Bonsai 2.9.2**.
    - A red box saying some Bonsai DLLs are missing. That is expected right now.
 4. Click **Consolidate packages**. Wait until a window says **Package consolidation complete**, then click **OK**.
 5. Wait for Unity to finish loading the new files (a progress bar may show in the bottom right).
@@ -129,16 +129,18 @@ Unity needs a copy of Bonsai's program files (*DLLs*). This step is called **Con
 
 ## 7. Run a sample to check everything works
 
-1. In the **Project** window, open **Assets › Scenes** and double-click **SampleScene**.
+1. In the **Project** window, open **Assets › Samples › Scenes** and double-click **SampleScene**.
 2. Open the **Console** and click **Clear**.
 3. Press the **Play** button ▶ at the top of the window. It turns blue.
 4. Watch the Console. One message appears per second, ten in all:
    `TimerOutput 0 (delivered 3.2 ms after Bonsai emitted it)`, then `TimerOutput 1 ...`, up to `TimerOutput 9`.
 5. Press **Play** again to stop.
 
-**It worked if:** you saw ten `TimerOutput` lines. The workflow `timer-workflow.bonsai` ran inside Unity, and a small script (`WorkflowSubscriber`) printed each value. The number of milliseconds varies; it is how long Unity took to receive the value.
+**It worked if:** you saw ten `TimerOutput` lines. The workflow `timer-workflow.bonsai` (in **Assets › Samples › Workflows**) ran inside Unity, and a small script (`WorkflowSubscriber`, in **Assets › Samples › Scripts**) printed each value. The number of milliseconds varies; it is how long Unity took to receive the value.
 
-The other sample, **InputTest**, sends a number *from* Unity *into* Bonsai and prints what comes back: a fast-growing count in the Console.
+There are more samples in **Assets › Samples › Scenes**. **ArduinoBlink** drives a real Arduino and needs extra setup, described in the [README](../README.md#arduino-blink-setup).
+
+The sample **InputTest** sends a number *from* Unity *into* Bonsai and prints what comes back: a fast-growing count in the Console.
 
 ## 8. Make your own workflow in Bonsai
 
@@ -151,7 +153,7 @@ You will make a workflow that produces a number every second and gives that stre
    - If it isn't connected, drag the **Timer** box onto the **PublishSubject** box to connect them.
 5. Select **PublishSubject**. In **Properties**, set **Name** to `MyNumbers`. The box now shows `MyNumbers`. Spelling and capitals matter: Unity finds the subject by this exact name.
 6. Press **F5** to try it in Bonsai. Double-click the `MyNumbers` box: a small window shows 0, 1, 2, ... counting up. Press **Shift+F5** to stop.
-7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\unity-dev-unity6\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
+7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\Unity-Bonsai-Hook-dev-unity6\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
 8. Close Bonsai, or at least stop the workflow (Shift+F5). Unity will run the workflow from now on.
 
 > **Screenshot to add:** `Images/bonsai-my-numbers.png`: the Timer → MyNumbers workflow in the Bonsai editor with the Properties panel showing Name.
@@ -172,7 +174,7 @@ If you cancel the file window, nothing happens; that is fine.
 
 A *scene* is one level or screen in Unity. You will make a new one so the samples stay untouched.
 
-1. **File › New Scene**, choose **Basic (URP)** (or the first template), click **Create**. Then **File › Save As...**, save it in **Assets › Scenes** as `MyScene`.
+1. **File › New Scene**, choose **Basic (URP)** (or the first template), click **Create**. Then **File › Save As...**, save it in **Assets** as `MyScene`. (Keep it out of **Samples** so your work stays separate from the samples.)
 2. In the **Hierarchy**, click **+** (top left) › **Create Empty**. An object called **GameObject** appears.
 3. With it selected, find the name field at the top of the **Inspector** and rename it `Bonsai`. Press Enter.
 4. In the Inspector, click **Add Component**, type `Bonsai Workflow` and click it.

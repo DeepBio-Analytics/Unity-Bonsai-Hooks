@@ -83,3 +83,6 @@ Release/
 
 .vscode/
 .vscode/*
+
+# Bonsai editor state (created next to workflows and in the project)
+.bonsai/

@@ -22,6 +22,7 @@ using System.Reactive.Linq;
 using System.Threading;
 using Bonsai;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Debug = UnityEngine.Debug;
 
 /// <summary>
@@ -119,6 +120,7 @@ public class HooksDemo : MonoBehaviour
     {
         immediateDelayMs = Interlocked.Read(ref immediateEmitTicks) * 1000.0 / Stopwatch.Frequency;
         SetColor(trigger, Time.time < triggerFlashUntil ? TriggerHit : TriggerIdle);
+        ReadKeys();
 
         // Send the slider only when it moves, so the log isn't flooded
         if (state == State.Running && !Mathf.Approximately(slider, sentSlider))
@@ -128,26 +130,39 @@ public class HooksDemo : MonoBehaviour
         }
     }
 
-    void OnGUI()
+    // Keys are read with the Input System package (Keyboard.current), once per frame
+    private void ReadKeys()
     {
-        // Keys come from IMGUI events so this works with either input backend
-        var e = Event.current;
-        if (e.type == EventType.KeyDown && state == State.Running)
+        var keyboard = Keyboard.current;
+        if (keyboard == null || state != State.Running)
         {
-            if (e.keyCode == KeyCode.Space)
-            {
-                triggerSignal.Send(++triggerCount);
-                e.Use();
-            }
-            else if (e.keyCode >= KeyCode.A && e.keyCode <= KeyCode.Z || e.keyCode >= KeyCode.Alpha0 && e.keyCode <= KeyCode.Alpha9)
-            {
-                string key = e.keyCode.ToString().Replace("Alpha", "");
-                Log($"UnityKey -> Bonsai: '{key}'");
-                keySignal.Send(key);
-                e.Use();
-            }
+            return;
         }
 
+        if (keyboard.spaceKey.wasPressedThisFrame)
+        {
+            triggerSignal.Send(++triggerCount);
+        }
+
+        foreach (var key in keyboard.allKeys)
+        {
+            if (!key.wasPressedThisFrame)
+            {
+                continue;
+            }
+            bool letter = key.keyCode >= Key.A && key.keyCode <= Key.Z;
+            bool digit = key.keyCode >= Key.Digit0 && key.keyCode <= Key.Digit9;
+            if (letter || digit)
+            {
+                string name = key.keyCode.ToString().Replace("Digit", "");
+                Log($"UnityKey -> Bonsai: '{name}'");
+                keySignal.Send(name);
+            }
+        }
+    }
+
+    void OnGUI()
+    {
         GUILayout.BeginArea(new Rect(10, 10, 420, Screen.height - 20), GUI.skin.box);
         GUILayout.Label($"<b>Bonsai hooks demo</b>   workflow: {state}", new GUIStyle(GUI.skin.label) { richText = true });
 

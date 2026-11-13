@@ -18,7 +18,7 @@
 # <dll>                             <version>  <needed by>
 
 # Referenced directly by the sample workflows
-Bonsai.Core.dll                      2.9.1      workflows (Reactive operators, subjects, properties)
+Bonsai.Core.dll                      2.9.2      workflows (Reactive operators, subjects, properties)
 
 # Dependencies of the above
 System.Reactive.Core.dll             2.2.5      Bonsai.Core

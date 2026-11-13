@@ -2,7 +2,13 @@
 
 [README](../README.md) › Possible extensions
 
-Ideas for integrating Unity more deeply with Bonsai and the packages around it. **None of this is built.** Each entry says what it would give users, a sketch of how, the effort (S: a day or two, M: about a week, L: several weeks), and what is unknown. Facts about Bonsai and its packages come from the [sources](#sources) at the end. Anything marked *untested* is an expectation, not something we have run.
+Ideas for integrating Unity more deeply with Bonsai and the packages around it. **Most of this is not built.** Each entry says what it would give users, a sketch of how, the effort (S: a day or two, M: about a week, L: several weeks), and what is unknown. Entries with a **Status** line are built or partly built; everything else is not. Facts about Bonsai and its packages come from the [sources](#sources) at the end. Anything marked *untested* is an expectation, not something we have run.
+
+| Status | Entries |
+|---|---|
+| Built | [A3](#a3-unity-to-bonsai-subjects), [A6](#a6-reach-nested-nodes) |
+| Partly built | [A4](#a4-externalized-properties-in-the-inspector), [A5](#a5-generate-requireddllstxt-from-the-workflow), [A7](#a7-workflow-lifecycle-and-errors-in-unity), [A10](#a10-bonsai-environments-and-pinned-packages), [A12](#a12-built-players) |
+| New task | [A14](#a14-unity-created-subjects) (the part of A3 not built) |
 
 ## Recommended order
 
@@ -11,7 +17,7 @@ If only a few get built, these give the most for the least:
 1. **[Import `.bonsai` files directly](#a1-import-bonsai-files-directly)** (S). Removes the manual "Create asset / Overwrite" step, the most common user mistake.
 2. **[No-code Inspector components](#a2-no-code-inspector-components)** (M). Users connect subjects to scene actions without writing scripts; most of the [Recipes](Recipes.md) become components.
 3. **[Generate `RequiredDlls.txt` from the workflow](#a5-generate-requireddllstxt-from-the-workflow)** (S). The DLL list stays right without anyone editing it.
-4. **[Unity-to-Bonsai subjects](#a3-unity-to-bonsai-subjects)** (M). The missing direction: Unity publishes named streams that the workflow subscribes to.
+4. **[Unity-created subjects](#a14-unity-created-subjects)** (M). Finishes A3: Unity creates the subject itself, so a workflow doesn't have to declare it first.
 5. **[Harp clock synchronization](#b2-harp)** (M). Puts Unity's events on the same sub-millisecond clock as Harp, ONIX and other rig hardware.
 
 ## A. The bridge itself
@@ -44,15 +50,15 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 ### A3. Unity-to-Bonsai subjects
 
-**Gives:** Unity publishes named streams (trial state, player position, frame times) that any part of the workflow, including nested groups, reads with an ordinary `SubscribeSubject`. Today Unity can only drive externalized properties and replace top-level sources.
+**Gives:** Unity publishes named streams (trial state, player position, frame times) that any part of the workflow, including nested groups, reads with an ordinary `SubscribeSubject`.
 
-**How:** at start, add a top-level node to the graph that is a `Source<T>` fed from Unity and connected to a new `BehaviorSubject` or `PublishSubject` with the requested name, before building. Bonsai's subjects are resolved by name across scopes ([subjects article](https://bonsai-rx.org/docs/articles/subjects.html)), so nested workflows can see it. API sketch: `workflow.PublishToSubject<T>("UnityPosition", out IObserver<T> sink)`.
-
-**Effort:** M. **Unknown:** subject declaration order (a subject must exist before `SubscribeSubject` nodes are built).
+**Status: built, for subjects the workflow declares.** `UnitySignal<T>` is a `Source<T>` that Unity calls `Send(value)` on, and `BonsaiWorkflow.SendToSubject<T>(signal, subjectName, groupPath)` feeds it into a subject the workflow already declares (for example a `BehaviorSubject` in the `.bonsai` file). See [Hook API](Hook-API.md#sendtosubjectt-unity-to-bonsai-by-subject). The part not built, where Unity creates the subject itself, is [A14](#a14-unity-created-subjects).
 
 ### A4. Externalized properties in the Inspector
 
 **Gives:** experimenters change workflow parameters (delays, thresholds, port names) on the **Bonsai Workflow** component, per scene or per computer, without opening Bonsai.
+
+**Status: partly built.** `GetExternalizedTimeSpan(name)` reads one value, `SetNodeProperty` overrides a property by node type, and `ReplaceSource` swaps a source for a Unity one. Not built: the generic `GetExternalizedValue<T>`, the Inspector fields, per-machine override files, and targeting the mapped node rather than every node of a type.
 
 **How:** list the workflow's top-level `ExternalizedMapping` nodes and the types of the properties they map. Show each as a typed field with the workflow's value as the default; apply changed ones at start with the same mechanism as `SetNodeProperty`, but targeted at the mapped node rather than every node of a type. Generalizes `GetExternalizedTimeSpan` to `GetExternalizedValue<T>(name)`. Per-machine values (COM ports) could live in an untracked override file, which would also fix the "wrong COM port after pulling" problem.
 
@@ -62,6 +68,8 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 **Gives:** the DLL check stays correct without hand-editing.
 
+**Status: partly built.** The check itself exists: `RequiredDlls.txt` is read by `BonsaiDllCheck`, which warns in the editor and fails player builds. The list is still edited by hand.
+
 **How:** every `.bonsai` file declares the assemblies it uses in its header (`xmlns:ard="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino"`). Read those from every workflow asset in the project, resolve dependencies from the install's `Bonsai.config` and the DLLs' references (`AssemblyName.GetReferencedAssemblies`), and write the list with versions from the consolidated files. Run it after Consolidate and on import (A1).
 
 **Effort:** S.
@@ -70,13 +78,13 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 **Gives:** hooks for nodes inside groups, not only the top level. Users wouldn't have to restructure workflows for Unity.
 
-**How:** walk `GroupWorkflowBuilder.Workflow` recursively and address nodes by path (`"LED logic/PortArmed"`). `SelectMany` and other nested workflows that are rebuilt per value can't be hooked this way; document that.
-
-**Effort:** S to M. **Unknown:** inspect-builder wrapping inside groups after `ToInspectableGraph`.
+**Status: built.** `InjectSubscription`, `InjectImmediateSubscription`, `SendToSubject`, `ReplaceSource` and `SetNodeProperty` take an optional `groupPath` (`"HARP/Markers"`). The search walks `GroupWorkflowBuilder.Workflow` recursively and skips disabled groups. `SelectMany` and `CreateObservable` inner workflows are rebuilt per value and can't be hooked; this is documented. See [Hooks inside groups](Hook-API.md#hooks-inside-groups). Remaining limit: nodes inside a group are matched by type and display name, so subject names must be unique across the whole workflow. Addressing by full path is not built.
 
 ### A7. Workflow lifecycle and errors in Unity
 
 **Gives:** a public `StartWorkflow`/`StopWorkflow`/`Restart`, an `IsRunning` flag, and `UnityEvent`s for **Started**, **Completed** and **Error** (with the failing node's name), so a scene can show "hardware disconnected" or restart cleanly.
+
+**Status: partly built.** `StopWorkflow()` is public and safe to call at any time. `HoldStart`/`ReleaseStart` delay Auto Start. Errors and completion are only logged to the Console. Not built: public `StartWorkflow` and `Restart`, `IsRunning`, the Started, Completed and Error events, and error reporting by node name. `StartWorkflow` is currently private.
 
 **How:** expose what `BonsaiWorkflow` already does; subscribe to each top-level branch's errors separately to report which one ended. A restart needs the workflow re-parsed from the asset, since the built graph has been modified.
 
@@ -108,6 +116,8 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 **Gives:** one command reproduces a project's Bonsai setup on a new computer.
 
+**Status: partly built.** The installer finds a Bonsai install (a path set in the inspector, then `%LOCALAPPDATA%\Bonsai`, then `%ProgramFiles%\Bonsai`, then a portable copy in the project) and can download and set up a portable copy. Not built: restoring from project-local `Bonsai.config` and `NuGet.config`, or pinning package versions.
+
 **How:** Bonsai can keep a project-local environment: a `.bonsai` folder with `Bonsai.config` (the pinned packages) and `NuGet.config`, created with `bonsai --init` and restored with `bonsai --no-editor` ([environments article](https://bonsai-rx.org/docs/articles/environments.html)). Keep such an environment in the Unity project (both config files in git, `Packages` ignored). Make the installer prefer it, restore it on demand, and consolidate from it, so every machine gets the same versions. Replaces the system-install-first search for projects that opt in.
 
 **Effort:** S to M.
@@ -124,7 +134,9 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 **Gives:** experiments run as a standalone `.exe` without the Unity Editor.
 
-**How:** `BonsaiDllBuildCheck` already blocks builds with missing DLLs. Still to check: whether the native x64 libraries that Consolidate copies reach the build's `Plugins` folder, and the scripting backend. Bonsai builds workflows from expression trees at runtime, which needs the **Mono** backend; IL2CPP has no runtime code generation (*untested*, but likely to fail). Add a build check that refuses IL2CPP, and document a tested build.
+**Status: partly built.** `BonsaiDllBuildCheck` already blocks builds with missing DLLs. No check for the scripting backend exists yet, and no player build has been tested.
+
+**How:** Still to check: whether the native x64 libraries that Consolidate copies reach the build's `Plugins` folder, and the scripting backend. Bonsai builds workflows from expression trees at runtime, which needs the **Mono** backend; IL2CPP has no runtime code generation (*untested*, but likely to fail). Add a build check that refuses IL2CPP, and document a tested build.
 
 **Effort:** S to verify, M to fix.
 
@@ -135,6 +147,14 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 **How:** keep the hook API, but carry subjects over a socket instead of in-process. [`Bonsai.ZeroMQ`](https://github.com/bonsai-rx/zeromq) (asynchronous message streaming) or [`Bonsai.Osc`](https://www.nuget.org/packages/Bonsai.Osc/) on the Bonsai side, and the matching library in Unity. Timestamps must then be converted between clocks (see B2).
 
 **Effort:** L. Adds network latency and jitter, the main thing in-process hosting avoids.
+
+### A14. Unity-created subjects
+
+**Gives:** Unity publishes a named stream without the workflow author declaring a subject for it first. Today the workflow must contain the subject, so adding a Unity value means editing the `.bonsai` file. This is the part of [A3](#a3-unity-to-bonsai-subjects) that is not built.
+
+**How:** at start, before the graph is built, add a top-level node to the graph that is a `UnitySignal<T>` connected to a new `BehaviorSubject` or `PublishSubject` with the requested name. Bonsai's subjects are resolved by name across scopes ([subjects article](https://bonsai-rx.org/docs/articles/subjects.html)), so nested workflows can see it. API sketch: `workflow.PublishToSubject<T>("UnityPosition", out UnitySignal<T> signal)`, registered in `Awake` like the other hooks.
+
+**Effort:** M. **Unknown:** subject declaration order (a subject must exist before `SubscribeSubject` nodes are built), and what to do when the workflow already declares a subject with the same name (reuse it, as `SendToSubject` does, or fail).
 
 ## B. Bonsai packages and hardware
 

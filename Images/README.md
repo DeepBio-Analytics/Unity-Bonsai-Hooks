@@ -4,7 +4,7 @@ Screenshots used by the README and `docs/`. Pages mark a missing image with `> *
 
 | File | Shows | Used by | Status |
 |---|---|---|---|
-| `BonsaiInstaller.PNG` | BonsaiInstaller Inspector | README | **Outdated**: predates the DLL check box |
+| `BonsaiInstaller.PNG` | BonsaiInstaller Inspector | README | Current (shows the DLL check box) |
 | `BonsaiWorkflowComponent.PNG` | Bonsai Workflow component | README | **Outdated**: no Auto Start tick visible |
 | `TimerTest.PNG` | Timer → PublishSubject workflow in Bonsai | README | Current |
 | `unity-windows.png` | Unity Editor with Hierarchy, Scene, Inspector, Project, Console labelled | Getting started § 5 | **Needed** |
