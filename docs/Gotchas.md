@@ -14,14 +14,14 @@ Traps found while running Bonsai 2.9 workflows inside Unity 6, with their fixes.
 | Part of the workflow stops after one error | [An error stops that branch](#an-error-stops-that-branch) |
 | `No valid build context was provided` | [Build context and double wrapping](#build-context-and-double-wrapping) |
 | Callbacks fire twice, or "Workflow already started" | [Play mode without a domain reload](#play-mode-without-a-domain-reload) |
-| Edits to the workflow have no effect | [The asset is a snapshot](#the-asset-is-a-snapshot) |
+| Edits to the workflow have no effect | [Workflow assets don't update](#workflow-assets-dont-update) |
 | Which packages Consolidate skips or flags, and why | [Editor-only and incompatible packages](#editor-only-and-incompatible-packages) |
 
 ## A missing DLL makes empty nodes
 
 Bonsai loads each node from an assembly it can't find as a *proxy*: same type name, no properties, does nothing. The workflow builds and runs. The only visible symptom is a Unity-side override failing (`SetNodeProperty` logs `Bonsai.IO.CsvWriter has no settable property FileName`).
 
-**Fix:** list every DLL in `Assets/Bonsai/RequiredDlls.txt`, and run **Consolidate packages**. `BonsaiDllCheck` then warns at reload, errors at Play and fails builds when one is missing (see [Checking the DLLs](../README.md#checking-the-dlls)).
+**Fix:** run **Consolidate packages**. `RequiredDllsGenerator` keeps `Assets/Bonsai/RequiredDlls.txt` in step with the workflows, and `BonsaiDllCheck` warns at reload, errors at Play and fails builds when a DLL on it is missing (see [Checking the DLLs](../README.md#checking-the-dlls)). Commit the list, so other computers are checked against it.
 
 ## Hooks bind the wrong node
 
@@ -49,7 +49,7 @@ A node that refers to a named connection (`DigitalOutput` on an Arduino port nam
 
 ## An error stops that branch
 
-`BonsaiWorkflow` logs workflow errors with `Debug.LogError`, but by Rx rules the sequence that threw has already ended and stays ended until Play restarts. Handle expected errors inside the workflow (`Catch`, `Retry`) if a branch must survive them.
+`BonsaiWorkflow` logs workflow errors with `Debug.LogError`, and raises the `OnError` event with the failing node's name, but by Rx rules the sequence that threw has already ended and stays ended until you call `Restart()` (or restart Play). Handle expected errors inside the workflow (`Catch`, `Retry`) if a branch must survive them.
 
 ## Build context and double wrapping
 
@@ -59,9 +59,11 @@ A node that refers to a named connection (`DigitalOutput` on an Arduino port nam
 
 With *Enter Play Mode Options* set to skip the domain or scene reload, static fields and component fields survive into the next Play session. Upstream, events still queued in `BonsaiDispatcher` were delivered to the new session, and `BonsaiWorkflow` kept its old hook registrations, so each callback ran twice. Both now reset (`BonsaiDispatcher.Initialize`, `BonsaiWorkflow.OnDestroy`). Your own components should reset their runtime state at the top of `Awake` too.
 
-## The asset is a snapshot
+## Workflow assets don't update
 
-Unity runs the `.bonsai.asset`, not the `.bonsai` file. After editing the workflow in Bonsai, run **Bonsai > Create Bonsai workflow asset**, pick the file and choose **Overwrite**. Overwrite updates the asset in place, so scenes keep their reference.
+The editor rewrites `x.bonsai.asset` whenever `x.bonsai` inside `Assets/` is saved, so a scene that uses that asset is current. The exception is a workflow kept outside `Assets/`: **Bonsai › Generate workflow asset** copies it into `Assets/<file>.bonsai.asset`, and that copy only changes when you run the menu item again. Move the file into `Assets/` to make it update by itself.
+
+Keep the `.bonsai.asset` and its `.meta` file in version control. Scenes refer to the asset by the GUID in the `.meta`; if the asset is deleted and regenerated without it, Unity creates a new GUID and the **Bonsai Workflow Asset** field goes empty.
 
 ## Editor-only and incompatible packages
 

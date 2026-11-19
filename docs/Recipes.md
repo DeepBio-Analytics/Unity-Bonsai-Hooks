@@ -83,7 +83,7 @@ To show two subjects, add the script twice; the labels overlap, so this is only 
 2. In Bonsai, install the **Bonsai - Arduino Library** package (**Manage packages**, search `Arduino`).
 3. Build: **AnalogInput** → **PublishSubject** (Name `Sensor`).
 4. Select **AnalogInput**. Set **PortName** to your Arduino's port (`COM3`, for example; Windows Device Manager › Ports shows it) and **Pin** to the analog pin (0 for A0).
-5. Save, then in Unity: consolidate packages, add `Bonsai.Arduino.dll` to `RequiredDlls.txt` ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)), and create or overwrite the workflow asset.
+5. Save into **Assets**, then in Unity consolidate packages ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
 
 `AnalogInput` sends whole numbers from 0 to 1023.
 
@@ -202,7 +202,7 @@ Add several entries to do several things at once.
 3. Select the new node. In **Properties**, set its display name to something clear, for example `FloatInput`. Unity finds it by this name.
 4. Connect **FloatProperty** onwards to whatever uses the number, or to a **PublishSubject** to see it in Unity.
 
-The sample workflow **input-test.bonsai** is already built this way: `FloatInput` → **FloatProperty** → **PublishSubject** `FloatValue`. Open it in Bonsai to compare.
+The sample workflow **input-test.bonsai** (in **Assets › Samples › Workflows**) is already built this way: `FloatInput` → **FloatProperty** → **PublishSubject** `FloatValue`. Open it in Bonsai to compare.
 
 **Script name:** `SendNumberToBonsai`
 
@@ -272,7 +272,7 @@ Some Bonsai nodes, such as **Timer**, read a property only when the workflow sta
 
 **What it does:** each time you press Play, creates a folder named with the date and time (for example `C:\Data\2026-11-02_14-30-05`) and makes every **CsvWriter** in the workflow save into it as `bonsai.csv`. Without this, every run writes wherever the workflow says, and may overwrite the last one.
 
-**In Bonsai:** your workflow has a **CsvWriter** (package **Bonsai - System Library**) on the main level. Its own FileName doesn't matter; Unity replaces it. Add `Bonsai.System.dll` to `RequiredDlls.txt` ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
+**In Bonsai:** your workflow has a **CsvWriter** (package **Bonsai - System Library**) on the main level. Its own FileName doesn't matter; Unity replaces it. Consolidate packages after installing the package ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
 
 **Script name:** `SaveBonsaiCsvToFolder`
 
@@ -324,6 +324,7 @@ With two CsvWriters, both would write the same file. Give each its own folder by
 
 ```csharp
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(BonsaiWorkflow))]
 public class StopBonsaiWithKey : MonoBehaviour
@@ -331,7 +332,7 @@ public class StopBonsaiWithKey : MonoBehaviour
     private BonsaiWorkflow workflow;
 
     // The key that stops the workflow.
-    public KeyCode stopKey = KeyCode.Escape;
+    public Key stopKey = Key.Escape;
 
     void Awake()
     {
@@ -340,7 +341,8 @@ public class StopBonsaiWithKey : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(stopKey))
+        var keyboard = Keyboard.current;
+        if (keyboard != null && keyboard[stopKey].wasPressedThisFrame)
         {
             workflow.StopWorkflow();
             Debug.Log("Bonsai workflow stopped. Press Play twice to start it again.");
@@ -355,4 +357,4 @@ public class StopBonsaiWithKey : MonoBehaviour
 
 Click inside the **Game** view first, or Unity won't see the key. The workflow can't be restarted until you stop and start Play.
 
-This uses Unity's older input system. The sample project has it switched on. If your own project uses only the new Input System, the Console shows an `InvalidOperationException` about `UnityEngine.Input`. Fix it in **Edit › Project Settings › Player › Other Settings › Active Input Handling**: choose **Both**, and restart Unity when asked.
+This uses Unity's Input System package (`com.unity.inputsystem`), which the sample project includes and has set as its **Active Input Handling**. In your own project, install it in **Window › Package Manager** (search `Input System`) and check **Edit › Project Settings › Player › Other Settings › Active Input Handling** is **Input System Package (New)** or **Both**; restart Unity when asked. If it is set to the old handler only, the script doesn't compile. Don't mix this with scripts that call `Input.GetKey...` unless the setting is **Both**: with the new handler only, those calls throw an `InvalidOperationException` about `UnityEngine.Input`.

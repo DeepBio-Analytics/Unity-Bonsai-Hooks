@@ -12,3 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f5c9271023418243adde0c015f5974c, type: 3}
   m_Name: BonsaiInstaller
   m_EditorClassIdentifier: 
+  BonsaiPath: C:/Users/matt/AppData/Local/Bonsai

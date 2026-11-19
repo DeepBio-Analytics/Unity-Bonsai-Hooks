@@ -18,7 +18,7 @@ Allow about an hour the first time, most of it waiting for installs.
 6. [Copy Bonsai's files into Unity](#6-copy-bonsais-files-into-unity)
 7. [Run a sample to check everything works](#7-run-a-sample-to-check-everything-works)
 8. [Make your own workflow in Bonsai](#8-make-your-own-workflow-in-bonsai)
-9. [Turn the workflow into a Unity asset](#9-turn-the-workflow-into-a-unity-asset)
+9. [Find the workflow in Unity](#9-find-the-workflow-in-unity)
 10. [Put the workflow in a scene](#10-put-the-workflow-in-a-scene)
 11. [Make Unity react to the workflow](#11-make-unity-react-to-the-workflow)
 12. [When you change the workflow](#12-when-you-change-the-workflow)
@@ -45,7 +45,7 @@ You still use the Bonsai program to **build and edit** workflows. Unity only **r
 | Item | Version | Notes |
 |---|---|---|
 | A Windows 10 or 11 computer | 64-bit | Bonsai only runs on Windows. |
-| Bonsai | 2.9.1 | Free, from [bonsai-rx.org](https://bonsai-rx.org/docs/articles/installation.html). |
+| Bonsai | 2.9.2 | Free, from [bonsai-rx.org](https://bonsai-rx.org/docs/articles/installation.html). |
 | Unity Hub | any recent | Free, from [unity.com/download](https://unity.com/download). It installs and opens Unity. |
 | Unity Editor | **6000.6.0f1** | Installed through Unity Hub in step 3. Use exactly this version for the sample project. |
 | A Unity account | | Free. Unity Hub asks you to sign in. |
@@ -72,16 +72,13 @@ Use the **same Bonsai version on every computer** that runs your project. A work
 
 ## 4. Get this project
 
-Until the Unity 6 work is merged, it lives on the `dev-unity6` branch.
-
 1. Go to [github.com/DeepBio-Analytics/Unity-Bonsai-Hooks](https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks).
-2. Click the branch button (it says **main**) above the file list and choose **dev-unity6**.
-3. Click the green **Code** button, then **Download ZIP**.
-4. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
+2. Click the green **Code** button, then **Download ZIP**. (The default branch, **main**, is the Unity 6 version.)
+3. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
 
-You now have a folder such as `C:\Projects\unity-bonsai-hooks-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
+You now have a folder such as `C:\Projects\Unity-Bonsai-Hooks-main\`. The Unity project is the **`BonsaiInterface`** folder inside it.
 
-> If you use Git: `git clone -b dev-unity6 https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks.git` does the same.
+> If you use Git: `git clone https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks.git` does the same.
 
 ## 5. Open the project in Unity
 
@@ -89,6 +86,9 @@ You now have a folder such as `C:\Projects\unity-bonsai-hooks-dev-unity6\`. The 
 2. Select the **`BonsaiInterface`** folder (not the folder above it) and click **Open** or **Add Project**.
 3. The project appears in the list. If a warning says the editor version **6000.6.0f1** is missing, click it and choose **Install**. Wait for the install to finish (this can take a while).
 4. Click the project name to open it. The first opening takes several minutes.
+5. **Unity will ask whether to enter Safe Mode. This is expected.** The project doesn't include `Bonsai.Core.dll` yet (it is copied in at step 6), so the scripts can't compile and Unity reports compile errors. In the **Enter Safe Mode?** window, click **Ignore** to open the project normally. Do **not** click **Enter Safe Mode**.
+   - If the project has already opened in Safe Mode, click **Exit Safe Mode** in the Editor's top bar to leave it. Unity reports the same compile errors again; that is fine.
+   - Don't try to fix the errors yourself. Go on to step 6; consolidating the packages removes them.
 
 **What you will see:** the Unity Editor, with these windows. Their names are used throughout this guide:
 
@@ -101,7 +101,7 @@ You now have a folder such as `C:\Projects\unity-bonsai-hooks-dev-unity6\`. The 
 | **Console** | bottom, tab next to Project | Messages and errors. If you can't see it: **Window › General › Console** (Ctrl+Shift+C) |
 | Play button ▶ | top centre | Starts and stops the scene |
 
-**Messages in the Console now are expected:** a yellow warning that says `Missing Bonsai DLLs in Assets/Packages` means Unity doesn't have Bonsai's files yet. Step 6 fixes it. Red errors that mention `Bonsai` or `System.Reactive` mean the same thing.
+**Messages in the Console now are expected:** a yellow warning that says `Missing Bonsai DLLs in Assets/Packages` means Unity doesn't have Bonsai's files yet. Step 6 fixes it. Red errors that mention `Bonsai` or `System.Reactive` (the ones that triggered the Safe Mode prompt) mean the same thing.
 
 > **Screenshot to add:** `Images/unity-windows.png`: the Unity Editor with the Hierarchy, Scene, Inspector, Project and Console windows labelled.
 
@@ -113,7 +113,7 @@ Unity needs a copy of Bonsai's program files (*DLLs*). This step is called **Con
 2. Click the file **BonsaiInstaller** (its icon is a small cube). Click it once; don't double-click.
 3. Look at the **Inspector**. It shows:
    - **Bonsai Path**: the Bonsai install it found, for example `C:\Users\you\AppData\Local\Bonsai`.
-   - A box saying **Using Bonsai 2.9.1**.
+   - A box saying **Using Bonsai 2.9.2**.
    - A red box saying some Bonsai DLLs are missing. That is expected right now.
 4. Click **Consolidate packages**. Wait until a window says **Package consolidation complete**, then click **OK**.
 5. Wait for Unity to finish loading the new files (a progress bar may show in the bottom right).
@@ -126,16 +126,18 @@ Unity needs a copy of Bonsai's program files (*DLLs*). This step is called **Con
 
 ## 7. Run a sample to check everything works
 
-1. In the **Project** window, open **Assets › Scenes** and double-click **SampleScene**.
+1. In the **Project** window, open **Assets › Samples › Scenes** and double-click **SampleScene**.
 2. Open the **Console** and click **Clear**.
 3. Press the **Play** button ▶ at the top of the window. It turns blue.
 4. Watch the Console. One message appears per second, ten in all:
    `TimerOutput 0 (delivered 3.2 ms after Bonsai emitted it)`, then `TimerOutput 1 ...`, up to `TimerOutput 9`.
 5. Press **Play** again to stop.
 
-**It worked if:** you saw ten `TimerOutput` lines. The workflow `timer-workflow.bonsai` ran inside Unity, and a small script (`WorkflowSubscriber`) printed each value. The number of milliseconds varies; it is how long Unity took to receive the value.
+**It worked if:** you saw ten `TimerOutput` lines. The workflow `timer-workflow.bonsai` (in **Assets › Samples › Workflows**) ran inside Unity, and a small script (`WorkflowSubscriber`, in **Assets › Samples › Scripts**) printed each value. The number of milliseconds varies; it is how long Unity took to receive the value.
 
-The other sample, **InputTest**, sends a number *from* Unity *into* Bonsai and prints what comes back: a fast-growing count in the Console.
+There are more samples in **Assets › Samples › Scenes**. **ArduinoBlink** drives a real Arduino and needs extra setup, described in the [README](../README.md#arduino-blink-setup).
+
+The sample **InputTest** sends a number *from* Unity *into* Bonsai and prints what comes back: a fast-growing count in the Console.
 
 ## 8. Make your own workflow in Bonsai
 
@@ -148,33 +150,29 @@ You will make a workflow that produces a number every second and gives that stre
    - If it isn't connected, drag the **Timer** box onto the **PublishSubject** box to connect them.
 5. Select **PublishSubject**. In **Properties**, set **Name** to `MyNumbers`. The box now shows `MyNumbers`. Spelling and capitals matter: Unity finds the subject by this exact name.
 6. Press **F5** to try it in Bonsai. Double-click the `MyNumbers` box: a small window shows 0, 1, 2, ... counting up. Press **Shift+F5** to stop.
-7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\unity-dev-unity6\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
+7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\Unity-Bonsai-Hooks-main\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
 8. Close Bonsai, or at least stop the workflow (Shift+F5). Unity will run the workflow from now on.
 
 > **Screenshot to add:** `Images/bonsai-my-numbers.png`: the Timer → MyNumbers workflow in the Bonsai editor with the Properties panel showing Name.
 
 **Rule:** only nodes on the **main level** of the workflow can be reached from Unity. If you put `MyNumbers` inside a group (a box you can double-click to open), Unity can't see it.
 
-## 9. Turn the workflow into a Unity asset
+## 9. Find the workflow in Unity
 
-Unity can't use a `.bonsai` file directly. You make a Unity copy of it, called a *workflow asset*.
+Click back into Unity. Because you saved the file inside **Assets**, Unity has already picked it up: in the **Project** window, **my-workflow.bonsai** appears in **Assets**, with **my-workflow.bonsai.asset** next to it. The `.asset` is the *workflow asset* you give to Unity, and Unity rewrites it every time you save in Bonsai. Nothing else is needed.
 
-1. Click back into Unity. In the menu bar at the top, click **Bonsai › Create Bonsai workflow asset**.
-2. A file window opens. Choose `my-workflow.bonsai` and click **Open**.
-3. In the **Project** window, a new file **my-workflow.bonsai** with a cube icon appears in **Assets** next to the `.bonsai` file. (Its full name on disk is `my-workflow.bonsai.asset`.)
-
-If you cancel the file window, nothing happens; that is fine.
+If it isn't there, check that you saved into the **Assets** folder of the project Unity has open. A workflow saved anywhere else is invisible to Unity.
 
 ## 10. Put the workflow in a scene
 
 A *scene* is one level or screen in Unity. You will make a new one so the samples stay untouched.
 
-1. **File › New Scene**, choose **Basic (URP)** (or the first template), click **Create**. Then **File › Save As...**, save it in **Assets › Scenes** as `MyScene`.
+1. **File › New Scene**, choose **Basic (URP)** (or the first template), click **Create**. Then **File › Save As...**, save it in **Assets** as `MyScene`. (Keep it out of **Samples** so your work stays separate from the samples.)
 2. In the **Hierarchy**, click **+** (top left) › **Create Empty**. An object called **GameObject** appears.
 3. With it selected, find the name field at the top of the **Inspector** and rename it `Bonsai`. Press Enter.
 4. In the Inspector, click **Add Component**, type `Bonsai Workflow` and click it.
 5. The **Bonsai Workflow** component has two settings:
-   - **Bonsai Workflow Asset**: drag **my-workflow.bonsai** (the cube icon) from the Project window onto this field.
+   - **Bonsai Workflow Asset**: drag **my-workflow.bonsai.asset** from the Project window onto this field.
    - **Auto Start**: **tick it.** Without it the workflow never runs.
 6. **File › Save** (Ctrl+S).
 
@@ -239,15 +237,11 @@ Unity listens to a subject through a short *script*. You don't need to understan
 
 ## 12. When you change the workflow
 
-Unity runs the **asset**, which is a copy made in step 9. Editing the `.bonsai` file does nothing in Unity until you refresh the copy:
-
 1. Edit and save the workflow in Bonsai. Stop it in Bonsai if it is running (Shift+F5).
-2. In Unity: **Bonsai › Create Bonsai workflow asset**, choose the same `.bonsai` file.
-3. A window says the asset already exists. Click **Overwrite**.
+2. Click back into Unity. It notices the saved file and imports it again, which takes a moment.
+3. Press Play. The scene runs the new version; the **Bonsai Workflow** component still points at it.
 
-Overwrite keeps the asset's identity, so the **Bonsai Workflow** component in your scene still points at it.
-
-**Do this every time.** Forgetting it is the most common reason "my change does nothing".
+Unity only notices changes when its window is active. If you are already in Play mode, stop and start Play again to run the new version.
 
 ## 13. Moving to another computer
 
@@ -257,21 +251,16 @@ Bonsai's DLLs are **not** stored in Git or in the ZIP. On each new computer:
 2. Open the project in Unity (step 5).
 3. Consolidate packages (step 6).
 
-Hardware settings such as **serial port names** (`COM3`, `COM5`) are saved inside the workflow and usually differ between computers. Open the workflow in Bonsai on the new computer, fix the port names, save, and refresh the asset (step 12). A wrong port shows up as an "access denied" or "port does not exist" error in the Console.
+Hardware settings such as **serial port names** (`COM3`, `COM5`) are saved inside the workflow and usually differ between computers. Open the workflow in Bonsai on the new computer, fix the port names and save (step 12). A wrong port shows up as an "access denied" or "port does not exist" error in the Console.
 
 ### If your workflow uses more Bonsai packages
 
-The sample project only checks for the files the samples need. When your workflow uses another package (Arduino, cameras, file writing...):
+When your workflow uses another package (Arduino, cameras, file writing...):
 
 1. Install it in Bonsai (**Manage packages**).
 2. Consolidate packages again (step 6).
-3. Add the package's DLL to **Assets › Bonsai › RequiredDlls.txt** (open it with Notepad), one line each, for example:
-   ```
-   Bonsai.Arduino.dll                   2.9.0      my workflow (Arduino)
-   ```
-   The version is the package version shown in Bonsai's package manager. This makes Unity warn you on any computer where the file is missing, instead of the nodes silently doing nothing.
 
-Not sure which packages a workflow uses? Open the `.bonsai` file in Notepad. The lines near the top that contain `assembly=` name them, for example `assembly=Bonsai.Arduino` means `Bonsai.Arduino.dll`.
+That's all. Unity keeps a list of the files your workflows need, **Assets › Bonsai › RequiredDlls.txt**, and updates it by itself whenever you save a workflow and after Consolidate packages. On any computer where one of those files is missing, Unity warns you instead of the nodes silently doing nothing. Commit the list along with your workflow, so the other computers know what to expect.
 
 ## Next steps
 
