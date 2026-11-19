@@ -163,12 +163,27 @@ TimeSpan cooldown = workflow.GetExternalizedTimeSpan("Cooldown");
 
 Finds the `ExternalizedMapping` with that display name and returns the `DueTime` of the node it feeds (`Delay`, `Timer`, `DelaySubscription`), as saved in the workflow. Useful to show a countdown in Unity that matches the workflow without copying the number. Call it from `Start` or later. Renaming the mapping, or connecting it to a node without a `TimeSpan DueTime`, makes it log an error and return zero. It reads `DueTime` only; other properties need a new method.
 
-## `StopWorkflow`
+## `StartWorkflow`, `Restart`, `StopWorkflow` and events
 
-Disposes the running workflow, which closes its serial ports and other devices. Safe to call when it never started or has already stopped; `OnDestroy` calls it. A stopped workflow can't be restarted until Play is entered again.
+```csharp
+workflow.StartWorkflow();   // with Auto Start off; register every hook first
+workflow.Restart();         // stop, parse the asset again, start
+workflow.StopWorkflow();    // dispose: closes serial ports and other devices
+bool running = workflow.IsRunning;
+```
+
+`IsRunning` is true from the start until the workflow completes, fails or is stopped. **Bonsai Workflow** also has three `UnityEvent`s, raised on the main thread and wired in the Inspector or with `AddListener`:
+
+| Event | Raised when |
+|---|---|
+| `Started` | the workflow has started |
+| `Completed` | every source in the workflow has finished (not after `StopWorkflow`) |
+| `OnError(string)` | a node fails while building or running; the argument is that node's display name, or `""` if Bonsai doesn't name one |
+
+An error ends the running workflow, so `Restart()` is the way to run it again; `StartWorkflow` on a workflow that already ran logs an error and does nothing, because building changes the graph. Hooks registered in `Awake` are applied again by `Restart`. `StopWorkflow` is safe to call when it never started or has already stopped; `OnDestroy` calls it. Whether the workflow survives a failure is the workflow's business (`Catch`, `Retry`); these events only report it.
 
 ## Threads
 
 - Bonsai emits on its own threads. Never call the Unity API from inside a `Source<T>` or other Bonsai-side code; `InjectSubscription` actions are already moved to the main thread.
 - `BonsaiDispatcher` creates its own `Dispatcher` GameObject before the first scene loads (`DontDestroyOnLoad`), so it needs no setup. It runs queued actions in order at the start of `Update` and of `LateUpdate`, before other scripts, catches and logs each action's exception on its own, and clears its queue when Play starts (so events left over from the last Play session aren't delivered to the new one).
-- Workflow errors are logged with `Debug.LogError` on the main thread. By Rx rules the branch that failed has ended (see [Gotchas](Gotchas.md#an-error-stops-that-branch)).
+- Workflow errors are logged with `Debug.LogError` on the main thread and raised as the `OnError` event. By Rx rules the branch that failed has ended (see [Gotchas](Gotchas.md#an-error-stops-that-branch)).

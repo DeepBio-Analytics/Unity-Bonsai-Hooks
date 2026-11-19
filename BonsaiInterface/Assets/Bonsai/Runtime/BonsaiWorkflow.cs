@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using System;
 using System.IO;
 using System.Xml;
@@ -38,8 +39,27 @@ public class BonsaiWorkflow : MonoBehaviour
     /// <summary>The workflow to run: the <c>.bonsai.asset</c> next to a <c>.bonsai</c> file, which the editor keeps up to date.</summary>
     public BonsaiWorkflowAsset BonsaiWorkflowAsset;
 
-    /// <summary>Build and start the workflow in <c>Start</c>, once no component holds it (see <see cref="HoldStart"/>). This is currently the only way to start a workflow.</summary>
+    /// <summary>Build and start the workflow in <c>Start</c>, once no component holds it (see <see cref="HoldStart"/>). With it off, call <see cref="StartWorkflow"/> yourself.</summary>
     public bool AutoStart = false;
+
+    /// <summary>Raised on the main thread after the workflow has started.</summary>
+    public UnityEvent Started = new UnityEvent();
+
+    /// <summary>Raised on the main thread when every source in the workflow has finished. Not raised by <see cref="StopWorkflow"/>.</summary>
+    public UnityEvent Completed = new UnityEvent();
+
+    /// <summary>
+    /// Raised on the main thread when the workflow fails, to build or while running, with the display name of the
+    /// node that failed ("" if Bonsai doesn't say). A workflow that failed while running has stopped; call
+    /// <see cref="Restart"/> to run it again.
+    /// </summary>
+    public UnityEvent<string> OnError = new UnityEvent<string>();
+
+    /// <summary>True from <see cref="StartWorkflow"/> until the workflow completes, fails or is stopped.</summary>
+    public bool IsRunning { get; private set; }
+
+    // Changes on every stop, so a late callback from an earlier run can't touch the current one
+    private int RunId;
 
     private WorkflowBuilder WorkflowBuilder;
     private IObservable<System.Reactive.Unit> WorkflowRuntime;
@@ -109,11 +129,16 @@ public class BonsaiWorkflow : MonoBehaviour
         }
     }
 
-    private void StartWorkflow()
+    /// <summary>
+    /// Builds and starts the workflow. Register every hook first (see the class remarks). Not needed with
+    /// <see cref="AutoStart"/> on. A workflow that has already started, completed or failed has to go through
+    /// <see cref="Restart"/> instead, because building changes the graph.
+    /// </summary>
+    public void StartWorkflow()
     {
         if (WorkflowDisposable != null)
         {
-            Debug.LogError("Workflow already started.");
+            Debug.LogError("Workflow already started. To run it again, call Restart.", this);
             return;
         }
 
@@ -229,9 +254,18 @@ public class BonsaiWorkflow : MonoBehaviour
         // Build workflow. Wrap in inspectable builders exactly once: ExpressionBuilder.Unwrap only
         // removes a single InspectBuilder, so a second wrap hides IRequireBuildContext elements
         // such as subjects and they never receive a build context.
-        WorkflowBuilder = new WorkflowBuilder(WorkflowBuilder.Workflow.ToInspectableGraph());
-        WorkflowBuilder.Workflow.Build();
-        WorkflowRuntime = WorkflowBuilder.Workflow.BuildObservable();
+        try
+        {
+            WorkflowBuilder = new WorkflowBuilder(WorkflowBuilder.Workflow.ToInspectableGraph());
+            WorkflowBuilder.Workflow.Build();
+            WorkflowRuntime = WorkflowBuilder.Workflow.BuildObservable();
+        }
+        catch (WorkflowException exception)
+        {
+            Debug.LogException(exception, this);
+            OnError.Invoke(NodeName(exception));
+            return;
+        }
 
         // Apply subscription injections
         foreach (var subscription in SubscriptionInjections)
@@ -285,11 +319,41 @@ public class BonsaiWorkflow : MonoBehaviour
         }
 
         // Create workflow subscription to begin, cache the disposable for ending the session, log errors to the main thread
+        int run = RunId;
+        IsRunning = true;
         WorkflowDisposable = WorkflowRuntime.Subscribe(
             unit => { },
-            er => { BonsaiDispatcher.RunOnMainThread(() => { Debug.LogError(er, this); }); },
-            () => { Debug.Log("Completed"); }
+            er => BonsaiDispatcher.RunOnMainThread(() =>
+            {
+                if (run != RunId) return;
+                IsRunning = false;
+                Debug.LogError(er, this);
+                OnError.Invoke(NodeName(er));
+            }),
+            () => BonsaiDispatcher.RunOnMainThread(() =>
+            {
+                if (run != RunId) return;
+                IsRunning = false;
+                Debug.Log("Completed");
+                Completed.Invoke();
+            })
         );
+
+        BonsaiDispatcher.RunOnMainThread(() =>
+        {
+            if (run == RunId) Started.Invoke();
+        });
+    }
+
+    /// <summary>
+    /// Stops the workflow, parses it again from the asset and starts it. Hooks registered in <c>Awake</c> stay
+    /// registered and are applied again. Also the way to run a workflow after it completed or failed.
+    /// </summary>
+    public void Restart()
+    {
+        StopWorkflow();
+        ParseWorkflow();
+        StartWorkflow();
     }
 
     /// <summary>
@@ -301,6 +365,15 @@ public class BonsaiWorkflow : MonoBehaviour
         // Null if the workflow never started, e.g. when quitting from the session setup screen
         WorkflowDisposable?.Dispose();
         WorkflowDisposable = null;
+        IsRunning = false;
+        RunId++;
+    }
+
+    // The display name of the node an exception names, or "" when Bonsai doesn't say
+    private static string NodeName(Exception error)
+    {
+        var builder = (error as WorkflowException)?.Builder ?? (error.InnerException as WorkflowException)?.Builder;
+        return builder == null ? "" : ExpressionBuilder.GetElementDisplayName(builder);
     }
 
     private void OnDestroy()

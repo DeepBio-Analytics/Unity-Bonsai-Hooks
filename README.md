@@ -69,8 +69,8 @@ Keep one Bonsai version on every machine: a workflow saved by a newer Bonsai can
 - **One Bonsai version on every machine.** A workflow saved by a newer Bonsai can fail to load against an older `Bonsai.Core.dll`.
 - **Some packages don't work inside Unity.** `Bonsai.BonVision`, `Bonsai.VR`, `Bonsai.Audio` and `Bonsai.Shaders` are skipped by Consolidate packages. Nodes that need a Windows message loop, such as `KeyDown`, never fire ([Gotchas](docs/Gotchas.md#keydown-never-fires-inside-unity)).
 - **Nested workflows can't be hooked.** Only `GroupWorkflow` contents are reachable, through `groupPath`; `SelectMany` and `CreateObservable` inner workflows are not.
-- **Auto Start is the only way to start a workflow.** `HoldStart`/`ReleaseStart` can delay it, but a stopped workflow can't be restarted until you leave and re-enter Play.
-- **Player builds are untested.** The build check blocks missing DLLs, but whether a built player runs a workflow hasn't been verified, and the IL2CPP scripting backend will likely fail (Bonsai builds workflows at runtime). Use **Mono**. See [Possible extensions](docs/Extensions.md#a12-built-players).
+- **A workflow that fails or completes stays ended.** **Bonsai Workflow** reports it with its `OnError` and `Completed` events (`OnError` names the failing node); call `Restart()` to run it again ([Hook API](docs/Hook-API.md#startworkflow-restart-stopworkflow-and-events)).
+- **Player builds work.** A built `.exe` runs the workflow and talks to Bonsai like the editor does, and the build check blocks missing DLLs. Use the **Mono** scripting backend: Bonsai builds workflows at runtime, so IL2CPP will likely fail (untested). See [Possible extensions](docs/Extensions.md#a12-built-players).
 - **Keep workflows inside `Assets/`.** Unity writes a `.bonsai.asset` next to each `.bonsai` file and rewrites it every time you save in Bonsai; assign that asset to **Bonsai Workflow**. A workflow outside the project needs **Bonsai › Generate workflow asset**, run again after each change.
 
 ## Checking the DLLs
@@ -104,7 +104,7 @@ Click **Launch Bonsai** and create a new Bonsai project. Add a timer node with a
 
 Switch back to Unity. A workflow asset, `timer-test.bonsai.asset`, appears next to the file in the Project window. Unity rewrites it every time you save in Bonsai, so there is nothing to refresh.
 
-Create a new empty game object in the Unity scene hierarchy and add the 'BonsaiWorkflow' component. In the 'BonsaiWorkflowAsset' field drag in `timer-test.bonsai.asset` from the Project window, and tick **Auto Start**. Auto Start is currently the only way to start a workflow.
+Create a new empty game object in the Unity scene hierarchy and add the 'BonsaiWorkflow' component. In the 'BonsaiWorkflowAsset' field drag in `timer-test.bonsai.asset` from the Project window, and tick **Auto Start**. With Auto Start off, call `StartWorkflow()` from a script instead.
 
 ![Bonsai workflow component](Images/BonsaiWorkflowComponent.PNG)
 

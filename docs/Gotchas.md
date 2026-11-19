@@ -49,7 +49,7 @@ A node that refers to a named connection (`DigitalOutput` on an Arduino port nam
 
 ## An error stops that branch
 
-`BonsaiWorkflow` logs workflow errors with `Debug.LogError`, but by Rx rules the sequence that threw has already ended and stays ended until Play restarts. Handle expected errors inside the workflow (`Catch`, `Retry`) if a branch must survive them.
+`BonsaiWorkflow` logs workflow errors with `Debug.LogError`, and raises the `OnError` event with the failing node's name, but by Rx rules the sequence that threw has already ended and stays ended until you call `Restart()` (or restart Play). Handle expected errors inside the workflow (`Catch`, `Retry`) if a branch must survive them.
 
 ## Build context and double wrapping
 
