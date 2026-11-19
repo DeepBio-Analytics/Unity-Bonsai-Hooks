@@ -18,7 +18,7 @@ Allow about an hour the first time, most of it waiting for installs.
 6. [Copy Bonsai's files into Unity](#6-copy-bonsais-files-into-unity)
 7. [Run a sample to check everything works](#7-run-a-sample-to-check-everything-works)
 8. [Make your own workflow in Bonsai](#8-make-your-own-workflow-in-bonsai)
-9. [Turn the workflow into a Unity asset](#9-turn-the-workflow-into-a-unity-asset)
+9. [Find the workflow in Unity](#9-find-the-workflow-in-unity)
 10. [Put the workflow in a scene](#10-put-the-workflow-in-a-scene)
 11. [Make Unity react to the workflow](#11-make-unity-react-to-the-workflow)
 12. [When you change the workflow](#12-when-you-change-the-workflow)
@@ -160,15 +160,11 @@ You will make a workflow that produces a number every second and gives that stre
 
 **Rule:** only nodes on the **main level** of the workflow can be reached from Unity. If you put `MyNumbers` inside a group (a box you can double-click to open), Unity can't see it.
 
-## 9. Turn the workflow into a Unity asset
+## 9. Find the workflow in Unity
 
-Unity can't use a `.bonsai` file directly. You make a Unity copy of it, called a *workflow asset*.
+Click back into Unity. Because you saved the file inside **Assets**, Unity has already picked it up: in the **Project** window, **my-workflow.bonsai** appears in **Assets**, with **my-workflow.bonsai.asset** next to it. The `.asset` is the *workflow asset* you give to Unity, and Unity rewrites it every time you save in Bonsai. Nothing else is needed.
 
-1. Click back into Unity. In the menu bar at the top, click **Bonsai › Create Bonsai workflow asset**.
-2. A file window opens. Choose `my-workflow.bonsai` and click **Open**.
-3. In the **Project** window, a new file **my-workflow.bonsai** with a cube icon appears in **Assets** next to the `.bonsai` file. (Its full name on disk is `my-workflow.bonsai.asset`.)
-
-If you cancel the file window, nothing happens; that is fine.
+If it isn't there, check that you saved into the **Assets** folder of the project Unity has open. A workflow saved anywhere else is invisible to Unity.
 
 ## 10. Put the workflow in a scene
 
@@ -179,7 +175,7 @@ A *scene* is one level or screen in Unity. You will make a new one so the sample
 3. With it selected, find the name field at the top of the **Inspector** and rename it `Bonsai`. Press Enter.
 4. In the Inspector, click **Add Component**, type `Bonsai Workflow` and click it.
 5. The **Bonsai Workflow** component has two settings:
-   - **Bonsai Workflow Asset**: drag **my-workflow.bonsai** (the cube icon) from the Project window onto this field.
+   - **Bonsai Workflow Asset**: drag **my-workflow.bonsai.asset** from the Project window onto this field.
    - **Auto Start**: **tick it.** Without it the workflow never runs.
 6. **File › Save** (Ctrl+S).
 
@@ -244,15 +240,11 @@ Unity listens to a subject through a short *script*. You don't need to understan
 
 ## 12. When you change the workflow
 
-Unity runs the **asset**, which is a copy made in step 9. Editing the `.bonsai` file does nothing in Unity until you refresh the copy:
-
 1. Edit and save the workflow in Bonsai. Stop it in Bonsai if it is running (Shift+F5).
-2. In Unity: **Bonsai › Create Bonsai workflow asset**, choose the same `.bonsai` file.
-3. A window says the asset already exists. Click **Overwrite**.
+2. Click back into Unity. It notices the saved file and imports it again, which takes a moment.
+3. Press Play. The scene runs the new version; the **Bonsai Workflow** component still points at it.
 
-Overwrite keeps the asset's identity, so the **Bonsai Workflow** component in your scene still points at it.
-
-**Do this every time.** Forgetting it is the most common reason "my change does nothing".
+Unity only notices changes when its window is active. If you are already in Play mode, stop and start Play again to run the new version.
 
 ## 13. Moving to another computer
 

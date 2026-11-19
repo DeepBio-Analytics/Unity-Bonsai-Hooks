@@ -14,7 +14,7 @@ Traps found while running Bonsai 2.9 workflows inside Unity 6, with their fixes.
 | Part of the workflow stops after one error | [An error stops that branch](#an-error-stops-that-branch) |
 | `No valid build context was provided` | [Build context and double wrapping](#build-context-and-double-wrapping) |
 | Callbacks fire twice, or "Workflow already started" | [Play mode without a domain reload](#play-mode-without-a-domain-reload) |
-| Edits to the workflow have no effect | [The asset is a snapshot](#the-asset-is-a-snapshot) |
+| Edits to the workflow have no effect | [Workflow assets don't update](#workflow-assets-dont-update) |
 | Which packages Consolidate skips or flags, and why | [Editor-only and incompatible packages](#editor-only-and-incompatible-packages) |
 
 ## A missing DLL makes empty nodes
@@ -59,9 +59,11 @@ A node that refers to a named connection (`DigitalOutput` on an Arduino port nam
 
 With *Enter Play Mode Options* set to skip the domain or scene reload, static fields and component fields survive into the next Play session. Upstream, events still queued in `BonsaiDispatcher` were delivered to the new session, and `BonsaiWorkflow` kept its old hook registrations, so each callback ran twice. Both now reset (`BonsaiDispatcher.Initialize`, `BonsaiWorkflow.OnDestroy`). Your own components should reset their runtime state at the top of `Awake` too.
 
-## The asset is a snapshot
+## Workflow assets don't update
 
-Unity runs the `.bonsai.asset`, not the `.bonsai` file. After editing the workflow in Bonsai, run **Bonsai > Create Bonsai workflow asset**, pick the file and choose **Overwrite**. Overwrite updates the asset in place, so scenes keep their reference.
+The editor rewrites `x.bonsai.asset` whenever `x.bonsai` inside `Assets/` is saved, so a scene that uses that asset is current. The exception is a workflow kept outside `Assets/`: **Bonsai › Generate workflow asset** copies it into `Assets/<file>.bonsai.asset`, and that copy only changes when you run the menu item again. Move the file into `Assets/` to make it update by itself.
+
+Keep the `.bonsai.asset` and its `.meta` file in version control. Scenes refer to the asset by the GUID in the `.meta`; if the asset is deleted and regenerated without it, Unity creates a new GUID and the **Bonsai Workflow Asset** field goes empty.
 
 ## Editor-only and incompatible packages
 

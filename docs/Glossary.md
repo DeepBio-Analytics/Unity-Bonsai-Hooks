@@ -45,7 +45,7 @@ Words used in these docs, in plain language.
 
 | Word | Meaning |
 |---|---|
-| **Workflow asset** | Unity's copy of a `.bonsai` file (`name.bonsai.asset`), made with **Bonsai › Create Bonsai workflow asset**. Unity runs this copy, so it must be refreshed after every change to the `.bonsai` file. |
+| **Workflow asset** | The `name.bonsai.asset` next to a `.bonsai` file: a copy of its XML that you assign to **Bonsai Workflow**. The editor rewrites it every time the `.bonsai` is saved. For a file outside the project it is a copy that only updates when you run **Bonsai › Generate workflow asset**. |
 | **Bonsai Workflow** (component) | Runs one workflow asset in the scene. **Auto Start** must be ticked for it to run. |
 | **BonsaiInstaller** | The file in `Assets/Bonsai` whose Inspector finds Bonsai and copies its files into Unity. |
 | **DLL** | A file of compiled program code (`.dll`). Bonsai's nodes live in DLLs, and Unity needs copies of them. |

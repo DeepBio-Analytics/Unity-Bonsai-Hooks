@@ -75,7 +75,7 @@ Work down this list:
 4. **Script attached?** The listening script (for example **Show Bonsai Value**) must be on the **same object** as Bonsai Workflow, and be ticked (enabled).
 5. **Right name?** The subject name in the script's settings must match the **Name** in Bonsai exactly. A mismatch prints [`Target node ... not found`](#name-not-found).
 6. **Does the workflow produce anything?** Open it in Bonsai, press **F5**, and double-click the subject to watch it. If nothing appears there either, the problem is in the workflow, not Unity. Stop it (Shift+F5) before going back to Unity.
-7. **Up-to-date asset?** See [Changes do nothing](#my-workflow-changes-do-nothing).
+7. **Running the file you edited?** See [Changes do nothing](#my-workflow-changes-do-nothing).
 8. **Game view visible?** On-screen text from the recipes appears in the **Game** tab, not the Scene tab.
 
 ## Name not found
@@ -85,17 +85,16 @@ Unity couldn't find a node with that name **and** that kind on the main level of
 1. Open the workflow in Bonsai. Find the node and check its **Name** (or, for an externalized property, its display name) letter by letter, capitals included. No extra spaces.
 2. Check the node is on the **main level**: not inside a group or other box you double-click to open. If it is, move it out, or connect what you need to a new PublishSubject on the main level.
 3. Check the **kind** of node. Recipes look for a **PublishSubject**. A **BehaviorSubject** with the same name won't be found unless the script says `BehaviorSubject` instead ([Hook API › Which type to pass](Hook-API.md#which-type-to-pass)).
-4. Save, then refresh the asset ([Getting started, step 12](Getting-Started.md#12-when-you-change-the-workflow)).
+4. Save, click back into Unity, and press Play again ([Getting started, step 12](Getting-Started.md#12-when-you-change-the-workflow)).
 
 ## My workflow changes do nothing
 
-Unity runs the workflow **asset**, a copy. After saving the `.bonsai` file in Bonsai:
+Unity regenerates `x.bonsai.asset` every time `x.bonsai` inside **Assets** is saved. If a change still does nothing:
 
-1. In Unity: **Bonsai › Create Bonsai workflow asset**, choose the same `.bonsai` file.
-2. Click **Overwrite**.
-3. Press Play again.
-
-Also check you edited the file the asset was made from: the asset is named after it (`my-workflow.bonsai` → `my-workflow.bonsai.asset`).
+1. **Was Unity in Play mode?** The workflow is read when Play starts. Stop and press Play again.
+2. **Did Unity notice?** It checks for changed files when its window becomes active. Click into Unity and wait for the import to finish, or right-click the workflow in the Project window and choose **Reimport**.
+3. **Is the scene using the right asset?** Select the object with **Bonsai Workflow** and click the **Bonsai Workflow Asset** field: the Project window highlights what it uses. It should be the `.bonsai.asset` next to the file you edit. An asset made from a workflow outside **Assets** only updates when you run **Bonsai › Generate workflow asset** ([why](Gotchas.md#workflow-assets-dont-update)).
+4. **Did you edit that file?** The highlighted asset is what Unity runs. A copy of the workflow saved somewhere else changes nothing.
 
 ## Serial port errors
 
@@ -105,7 +104,7 @@ Also check you edited the file the asset was made from: the asset is named after
 
 1. Open Windows **Device Manager** › **Ports (COM & LPT)** to see which COM number the device has.
 2. Open the workflow in Bonsai and set the node's **PortName** to that number. Save.
-3. Refresh the asset ([step 12](Getting-Started.md#12-when-you-change-the-workflow)).
+3. Click back into Unity and press Play again ([step 12](Getting-Started.md#12-when-you-change-the-workflow)).
 
 Port numbers differ between computers. Every computer needs its own setting.
 

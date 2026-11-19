@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -8,77 +6,52 @@ using System.IO;
 /// Adds the <c>Bonsai</c> menu to the Unity editor.
 /// </summary>
 /// <remarks>
+/// A <c>.bonsai.asset</c> next to every <c>.bonsai</c> file inside <c>Assets/</c> is kept up to date by
+/// <see cref="BonsaiWorkflowSnapshotSync"/>, so the menu is only needed to force a refresh or for a workflow kept outside the project.
 /// Adapted from the unmaintained emotional-cities/unity package (https://github.com/emotional-cities/unity)
 /// and fixed for Bonsai 2.9; see docs/developer/Bonsai-Internals.md.
 /// </remarks>
 public class BonsaiEditorMenu : MonoBehaviour
 {
     /// <summary>
-    /// <c>Bonsai &gt; Create Bonsai workflow asset</c>: asks for a <c>.bonsai</c> file and saves its XML as a
-    /// <see cref="BonsaiWorkflowAsset"/> named <c>&lt;file&gt;.bonsai.asset</c> next to it (or in <c>Assets/</c>
-    /// if the file is outside the project). If the asset already exists, it offers to overwrite it in place,
-    /// which keeps its GUID so scene references survive.
+    /// <c>Bonsai &gt; Generate workflow asset</c>: asks for a <c>.bonsai</c> file and saves a
+    /// <c>&lt;file&gt;.bonsai.asset</c> copy of it in the same folder. A file outside <c>Assets/</c> has no
+    /// project folder to save into, so its copy goes in <c>Assets/</c> and is not kept up to date. An existing
+    /// asset is updated in place, which keeps its GUID so scene references survive.
     /// </summary>
-    [MenuItem("Bonsai/Create Bonsai workflow asset")]
-    static void CreateBonsaiWorkflowAsset()
+    [MenuItem("Bonsai/Generate workflow asset")]
+    static void GenerateBonsaiWorkflowAsset()
     {
-        string path = EditorUtility.OpenFilePanelWithFilters("Choose workflow file", "", new string[] { "Bonsai Workflow (.bonsai)", "bonsai" });
-
-        // The panel returns an empty string when the user cancels.
+        string path = EditorUtility.OpenFilePanelWithFilters("Choose workflow file", "Assets", new string[] { "Bonsai Workflow (.bonsai)", "bonsai" });
         if (string.IsNullOrEmpty(path))
         {
             return;
         }
 
-        string fileData = File.ReadAllText(path);
         string workflowName = Path.GetFileName(path);
+        string fullPath = Path.GetFullPath(path).Replace('\\', '/');
+        string assetsRoot = Path.GetFullPath(Application.dataPath).Replace('\\', '/');
 
-        // The asset is written next to the source workflow. AssetDatabase only accepts
-        // project-relative paths, so a workflow outside the project falls back to Assets/.
-        string assetDirectory = "Assets";
-        string sourceDirectory = Path.GetDirectoryName(path).Replace('\\', '/');
-        string assetsRoot = Application.dataPath;
-
-        if (sourceDirectory.Equals(assetsRoot, System.StringComparison.OrdinalIgnoreCase) ||
-            sourceDirectory.StartsWith(assetsRoot + "/", System.StringComparison.OrdinalIgnoreCase))
+        string folder = "Assets";
+        if (fullPath.StartsWith(assetsRoot + "/", System.StringComparison.OrdinalIgnoreCase))
         {
-            assetDirectory = "Assets" + sourceDirectory.Substring(assetsRoot.Length);
+            string projectPath = "Assets" + fullPath.Substring(assetsRoot.Length);
+            folder = Path.GetDirectoryName(projectPath).Replace('\\', '/');
         }
         else
         {
-            Debug.LogWarning($"{workflowName} is outside the Unity project, so its asset will be created in Assets/ instead.");
+            Debug.LogWarning($"{workflowName} is outside the Unity project, so its asset is a copy: run this menu item again after each change in Bonsai. " +
+                             "Moving the .bonsai file into Assets/ makes Unity update the asset automatically.");
         }
 
-        string assetPath = $"{assetDirectory}/{workflowName}.asset";
+        string assetPath = $"{folder}/{workflowName}.asset";
+        BonsaiWorkflowSnapshotSync.Write(path, assetPath);
 
-        if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath)))
-        {
-            bool overwrite = EditorUtility.DisplayDialog(
-                "Asset already exists",
-                $"{assetPath} already exists. Overwrite it with the current contents of {workflowName}?",
-                "Overwrite",
-                "Cancel");
-
-            if (!overwrite)
-            {
-                return;
-            }
-
-            // Update in place rather than recreating: CreateAsset on an existing path deletes the
-            // old asset, which changes its GUID and breaks scene references to it.
-            BonsaiWorkflowAsset existing = AssetDatabase.LoadAssetAtPath<BonsaiWorkflowAsset>(assetPath);
-            if (existing != null)
-            {
-                existing.WorkflowBuilderData = fileData;
-                EditorUtility.SetDirty(existing);
-                AssetDatabase.SaveAssets();
-                return;
-            }
-        }
-
-        BonsaiWorkflowAsset asset = ScriptableObject.CreateInstance<BonsaiWorkflowAsset>();
-        asset.WorkflowBuilderData = fileData;
-        AssetDatabase.CreateAsset(asset, assetPath);
         AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        var saved = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        Selection.activeObject = saved;
+        EditorGUIUtility.PingObject(saved);
     }
 }

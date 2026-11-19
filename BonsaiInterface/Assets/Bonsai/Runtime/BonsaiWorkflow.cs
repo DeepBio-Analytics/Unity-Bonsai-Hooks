@@ -35,7 +35,7 @@ using Bonsai.Dag;
 /// </remarks>
 public class BonsaiWorkflow : MonoBehaviour
 {
-    /// <summary>The workflow to run, as a snapshot of a <c>.bonsai</c> file made with <c>Bonsai &gt; Create Bonsai workflow asset</c>.</summary>
+    /// <summary>The workflow to run: the <c>.bonsai.asset</c> next to a <c>.bonsai</c> file, which the editor keeps up to date.</summary>
     public BonsaiWorkflowAsset BonsaiWorkflowAsset;
 
     /// <summary>Build and start the workflow in <c>Start</c>, once no component holds it (see <see cref="HoldStart"/>). This is currently the only way to start a workflow.</summary>

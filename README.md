@@ -41,7 +41,7 @@ To add it to **your own** Unity project, copy the folder `BonsaiInterface/Assets
 |---|---|
 | `Runtime/` | `BonsaiWorkflow`, `BonsaiDispatcher`, `BonsaiWorkflowAsset`, `UnitySignal`: the runtime. They need the Bonsai DLLs. |
 | (top level) | The `BonsaiInstaller` asset. |
-| `Editor/` | `BonsaiEditorMenu`: the **Bonsai** menu. Editor-only, so player builds don't include it. |
+| `Editor/` | `BonsaiWorkflowSnapshotSync` (rewrites `x.bonsai.asset` whenever `x.bonsai` is saved) and `BonsaiEditorMenu`: the **Bonsai** menu. Editor-only, so player builds don't include them. |
 | `Installer/` | `BonsaiInstaller` and its inspector, `BonsaiDllCheck`. In their own Editor-only assembly with no Bonsai references, so they compile even before any Bonsai DLL is in the project. |
 | `RequiredDlls.txt` | The DLLs your workflows need (see [Checking the DLLs](#checking-the-dlls)). |
 
@@ -71,7 +71,7 @@ Keep one Bonsai version on every machine: a workflow saved by a newer Bonsai can
 - **Nested workflows can't be hooked.** Only `GroupWorkflow` contents are reachable, through `groupPath`; `SelectMany` and `CreateObservable` inner workflows are not.
 - **Auto Start is the only way to start a workflow.** `HoldStart`/`ReleaseStart` can delay it, but a stopped workflow can't be restarted until you leave and re-enter Play.
 - **Player builds are untested.** The build check blocks missing DLLs, but whether a built player runs a workflow hasn't been verified, and the IL2CPP scripting backend will likely fail (Bonsai builds workflows at runtime). Use **Mono**. See [Possible extensions](docs/Extensions.md#a12-built-players).
-- **Workflow assets are snapshots.** After editing a `.bonsai` file, refresh the asset with **Bonsai › Create Bonsai workflow asset › Overwrite**.
+- **Keep workflows inside `Assets/`.** Unity writes a `.bonsai.asset` next to each `.bonsai` file and rewrites it every time you save in Bonsai; assign that asset to **Bonsai Workflow**. A workflow outside the project needs **Bonsai › Generate workflow asset**, run again after each change.
 
 ## Checking the DLLs
 
@@ -96,11 +96,9 @@ Click **Launch Bonsai** and create a new Bonsai project. Add a timer node with a
 
 ![Timer test workflow](Images/TimerTest.PNG)
 
-In the Unity editor, locate the Bonsai menu (located with File, Edit etc.) and select **Create Bonsai workflow asset**, then pick the `.bonsai` file. This saves the workflow as a scriptable object named `timer-test.bonsai.asset` next to the file (or in `Assets/` if the file is outside the project), which can be dragged into the Unity inspector later.
+Switch back to Unity. A workflow asset, `timer-test.bonsai.asset`, appears next to the file in the Project window. Unity rewrites it every time you save in Bonsai, so there is nothing to refresh.
 
-The asset is a **snapshot**, not a link. After editing the workflow in Bonsai, run the menu item again and choose **Overwrite**; the asset is updated in place and keeps its GUID, so scenes that use it keep their reference.
-
-Create a new empty game object in the Unity scene hierarchy and add the 'BonsaiWorkflow' component. In the 'BonsaiWorkflowAsset' field drag in the newly created scriptable object from assets, and tick **Auto Start**. Auto Start is currently the only way to start a workflow.
+Create a new empty game object in the Unity scene hierarchy and add the 'BonsaiWorkflow' component. In the 'BonsaiWorkflowAsset' field drag in `timer-test.bonsai.asset` from the Project window, and tick **Auto Start**. Auto Start is currently the only way to start a workflow.
 
 ![Bonsai workflow component](Images/BonsaiWorkflowComponent.PNG)
 
@@ -140,7 +138,7 @@ Other hooks let Unity feed values into the workflow, replace a source node, over
 
 The project in `BonsaiInterface/` has four sample scenes. **Start with `Samples/Scenes/HooksDemo`**: it exercises every hook in one place. Press Play, click **Start**, then use the slider, letter keys and Space, and watch the LED and the on-screen log. The header of `HooksDemo.cs` maps each hook to its workflow node. Consolidate packages first (see [Installation](#installation)).
 
-Everything sample-only is in `BonsaiInterface/Assets/Samples`: scenes in `Samples/Scenes/`, scripts in `Samples/Scripts/`, workflows (each `.bonsai` file and its `.bonsai.asset`) in `Samples/Workflows/`. The package itself is `Assets/Bonsai`. Keyboard input in the samples uses the Input System package (`com.unity.inputsystem`, already in the project's `Packages/manifest.json`), with **Active Input Handling** set to **Input System Package (New)**; see the [key recipe](docs/Recipes.md#stop-the-workflow-with-a-key) if your own project differs.
+Everything sample-only is in `BonsaiInterface/Assets/Samples`: scenes in `Samples/Scenes/`, scripts in `Samples/Scripts/`, workflows (`.bonsai` files) in `Samples/Workflows/`. The package itself is `Assets/Bonsai`. Keyboard input in the samples uses the Input System package (`com.unity.inputsystem`, already in the project's `Packages/manifest.json`), with **Active Input Handling** set to **Input System Package (New)**; see the [key recipe](docs/Recipes.md#stop-the-workflow-with-a-key) if your own project differs.
 
 | Scene | Workflow | Script | What it shows |
 |---|---|---|---|

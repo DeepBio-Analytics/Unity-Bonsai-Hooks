@@ -14,7 +14,7 @@ Ideas for integrating Unity more deeply with Bonsai and the packages around it. 
 
 If only a few get built, these give the most for the least:
 
-1. **[Import `.bonsai` files directly](#a1-import-bonsai-files-directly)** (S). Removes the manual "Create asset / Overwrite" step, the most common user mistake.
+1. ~~**[Import `.bonsai` files directly](#a1-keep-the-workflow-asset-in-sync-automatically)** (S).~~ Built.
 2. **[No-code Inspector components](#a2-no-code-inspector-components)** (M). Users connect subjects to scene actions without writing scripts; most of the [Recipes](Recipes.md) become components.
 3. **[Generate `RequiredDlls.txt` from the workflow](#a5-generate-requireddllstxt-from-the-workflow)** (S). The DLL list stays right without anyone editing it.
 4. **[Unity-created subjects](#a14-unity-created-subjects)** (M). Finishes A3: Unity creates the subject itself, so a workflow doesn't have to declare it first.
@@ -22,13 +22,11 @@ If only a few get built, these give the most for the least:
 
 ## A. The bridge itself
 
-### A1. Import `.bonsai` files directly
+### A1. Keep the workflow asset in sync automatically
 
-**Gives:** no more **Bonsai › Create Bonsai workflow asset** and **Overwrite**. Saving the workflow in Bonsai updates Unity automatically.
+**Gives:** no more **Create asset** and **Overwrite** step. Saving the workflow in Bonsai updates Unity automatically.
 
-**How:** a Unity [`ScriptedImporter`](https://docs.unity3d.com/ScriptReference/AssetImporters.ScriptedImporter.html) for the `.bonsai` extension that produces a `BonsaiWorkflowAsset` as the file's main object. The importer reruns whenever the file changes, and the asset's GUID is the `.bonsai` file's own, so references survive. Existing `.bonsai.asset` files need a one-off migration (repoint scene references, then delete them). Ignore `.bonsai.layout` files.
-
-**Effort:** S. **Unknown:** whether Bonsai locks the file while saving (retry on import failure).
+**Status: built.** `BonsaiWorkflowSnapshotSync` is an `AssetPostprocessor`. When Unity imports a `.bonsai` file in `Assets/` it writes the XML into `x.bonsai.asset` next to it, creating the asset if it is missing and otherwise updating it in place, so the asset's GUID and every scene reference to it survive. The `.bonsai` file keeps Unity's default import (and its thumbnail). The file is read with sharing allowed, so Bonsai holding it open does not block the sync. At editor start every `.bonsai` file is checked once, which catches changes made while Unity was closed. Commit the `.bonsai.asset.meta` files: they carry the GUID that scenes use. **Bonsai › Generate workflow asset** forces a refresh and also handles a file outside `Assets/`, whose copy is not kept up to date. Not verified yet: the sync on the sample scenes (it needs the editor).
 
 ### A2. No-code Inspector components
 
