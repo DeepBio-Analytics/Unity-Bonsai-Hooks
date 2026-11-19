@@ -72,16 +72,13 @@ Use the **same Bonsai version on every computer** that runs your project. A work
 
 ## 4. Get this project
 
-Until the Unity 6 work is merged, it lives on the `dev-unity6` branch.
+1. Go to [github.com/DeepBio-Analytics/Unity-Bonsai-Hooks](https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks).
+2. Click the green **Code** button, then **Download ZIP**. (The default branch, **main**, is the Unity 6 version.)
+3. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
 
-1. Go to [github.com/DeepBio-Analytics/Unity-Bonsai-Hook](https://github.com/DeepBio-Analytics/Unity-Bonsai-Hook).
-2. Click the branch button (it says **main**) above the file list and choose **dev-unity6**.
-3. Click the green **Code** button, then **Download ZIP**.
-4. Right-click the downloaded ZIP and choose **Extract All...**. Extract it somewhere simple, such as `C:\Projects\`.
+You now have a folder such as `C:\Projects\Unity-Bonsai-Hooks-main\`. The Unity project is the **`BonsaiInterface`** folder inside it.
 
-You now have a folder such as `C:\Projects\Unity-Bonsai-Hook-dev-unity6\`. The Unity project is the **`BonsaiInterface`** folder inside it.
-
-> If you use Git: `git clone -b dev-unity6 https://github.com/DeepBio-Analytics/Unity-Bonsai-Hook.git` does the same.
+> If you use Git: `git clone https://github.com/DeepBio-Analytics/Unity-Bonsai-Hooks.git` does the same.
 
 ## 5. Open the project in Unity
 
@@ -153,7 +150,7 @@ You will make a workflow that produces a number every second and gives that stre
    - If it isn't connected, drag the **Timer** box onto the **PublishSubject** box to connect them.
 5. Select **PublishSubject**. In **Properties**, set **Name** to `MyNumbers`. The box now shows `MyNumbers`. Spelling and capitals matter: Unity finds the subject by this exact name.
 6. Press **F5** to try it in Bonsai. Double-click the `MyNumbers` box: a small window shows 0, 1, 2, ... counting up. Press **Shift+F5** to stop.
-7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\Unity-Bonsai-Hook-dev-unity6\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
+7. Press **Ctrl+S** to save. Browse to your Unity project's **Assets** folder (for example `C:\Projects\Unity-Bonsai-Hooks-main\BonsaiInterface\Assets`) and save as `my-workflow.bonsai`.
 8. Close Bonsai, or at least stop the workflow (Shift+F5). Unity will run the workflow from now on.
 
 > **Screenshot to add:** `Images/bonsai-my-numbers.png`: the Timer → MyNumbers workflow in the Bonsai editor with the Properties panel showing Name.
