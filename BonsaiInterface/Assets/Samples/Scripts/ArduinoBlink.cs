@@ -96,6 +96,7 @@ public class ArduinoBlink : MonoBehaviour
     void Update()
     {
         var keyboard = Keyboard.current;
+
         if (keyboard == null || !keyboard.spaceKey.wasPressedThisFrame)
         {
             return;

@@ -22,8 +22,8 @@
 
 # Used directly by the workflows
 Bonsai.Arduino.dll                    2.9.0      arduino-blink.bonsai
-Bonsai.Core.dll                       2.9.2      the Unity bridge, arduino-blink.bonsai, hooks-demo.bonsai, input-test.bonsai, timer-workflow.bonsai
-Bonsai.Scripting.Expressions.dll      2.10.0     arduino-blink.bonsai
+Bonsai.Core.dll                       2.9.2      the Unity bridge, arduino-blink.bonsai, fails.bonsai, finishes.bonsai, hooks-demo.bonsai, 2 more workflows
+Bonsai.Scripting.Expressions.dll      2.10.0     arduino-blink.bonsai, fails.bonsai
 Bonsai.Windows.Input.dll              2.9.2      arduino-blink.bonsai
 
 # Dependencies of the above

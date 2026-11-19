@@ -479,6 +479,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BonsaiWorkflowAsset: {fileID: 11400000, guid: f0fb28ac7719ed2d9f859ddcdab024f3, type: 2}
   AutoStart: 1
+  Started:
+    m_PersistentCalls:
+      m_Calls: []
+  Completed:
+    m_PersistentCalls:
+      m_Calls: []
+  OnError:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &2123352737
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -492,7 +501,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Workflow: {fileID: 2123352736}
-  BlinkPeriodSeconds: 0.25
+  BlinkPeriodSeconds: 1
   LogLedWrites: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
