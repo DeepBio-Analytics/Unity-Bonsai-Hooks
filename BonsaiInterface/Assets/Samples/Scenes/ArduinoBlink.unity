@@ -492,8 +492,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Workflow: {fileID: 2123352736}
-  PortName: COM6
-  BlinkPeriodSeconds: 1
+  BlinkPeriodSeconds: 0.25
+  LogLedWrites: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -9,7 +9,6 @@
       Unity to Bonsai  SendToSubject         BlinkEnabled (PublishSubject)    Space sends true / false: start / stop
       Bonsai to Unity  InjectSubscription    BlinkRate (PublishSubject)       Measured blink rate in Hz, logged
       Unity to Bonsai  SetNodeProperty       Timer.DueTime / Period           Inspector "Blink Period Seconds"
-      Unity to Bonsai  SetNodeProperty       DigitalOutput.PortName           Inspector "Port Name"
 
     Needs the Bonsai Arduino and Bonsai.Scripting.Expressions packages consolidated into Assets/Packages, and
     StandardFirmata on the board (see docs/Recipes.md, Arduino example).
@@ -32,9 +31,6 @@ using UnityEngine.InputSystem;
 public class ArduinoBlink : MonoBehaviour
 {
     public BonsaiWorkflow Workflow;
-
-    [Tooltip("The Arduino's serial port, for example COM3 (Windows Device Manager > Ports). Written into the workflow's DigitalOutput before it starts.")]
-    public string PortName = "COM3";
 
     [Tooltip("Seconds for one full on-and-off cycle. 1 gives a 1 Hz blink. Written into the workflow's Timer before it starts.")]
     [Min(0.05f)]
@@ -64,7 +60,6 @@ public class ArduinoBlink : MonoBehaviour
         var half = TimeSpan.FromSeconds(BlinkPeriodSeconds / 2.0);
         Workflow.SetNodeProperty("Bonsai.Reactive.Timer", "DueTime", half);
         Workflow.SetNodeProperty("Bonsai.Reactive.Timer", "Period", half);
-        Workflow.SetNodeProperty("Bonsai.Arduino.DigitalOutput", "PortName", PortName);
 
         // Unity -> Bonsai: true / false into BlinkEnabled. The workflow keeps the LED low until it is true.
         Workflow.SendToSubject(enabledSignal, "BlinkEnabled");
@@ -95,7 +90,7 @@ public class ArduinoBlink : MonoBehaviour
             }
         });
 
-        Debug.Log($"ArduinoBlink: press Space to start and stop the LED on {PortName}. Opening the port resets the Arduino, so allow about 2 s after Play.");
+        Debug.Log($"ArduinoBlink: press Space to start and stop the LED. The port and baud rate are set on the CreateArduino node in arduino-blink.bonsai. Opening the port resets the Arduino, so allow about 2 s after Play.");
     }
 
     void Update()
@@ -115,7 +110,7 @@ public class ArduinoBlink : MonoBehaviour
     void OnGUI()
     {
         GUI.Label(new Rect(20, 20, 700, 60),
-            $"Arduino blink   port {PortName}   period {BlinkPeriodSeconds:0.##} s   {(blinking ? "BLINKING" : "stopped")}\n" +
+            $"Arduino blink   period {BlinkPeriodSeconds:0.##} s   {(blinking ? "BLINKING" : "stopped")}\n" +
             "Space: start / stop");
     }
 
