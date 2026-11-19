@@ -4,7 +4,7 @@ A Bonsai interface for the Unity real-time development platform
 # Introduction
 This repository contains a Unity package and minimal sample project to allow the Unity engine to interface with Bonsai workflows. This interface can be used to pass data between Unity and Bonsai at runtime and harness Bonsai reactive workflows to perform image processing tasks, integrate Arduino devices, perform machine-learning tasks etc.
 
-Unity loads the Bonsai runtime DLLs and runs the workflow **inside its own process**. There is no network link between the two, and Unity sees each value the moment Bonsai emits it, with a timestamp taken on the same clock (`Stopwatch`, i.e. QueryPerformanceCounter on Windows).
+Unity loads the Bonsai runtime DLLs and runs the workflow **inside its own process**. There is no network link between the two, and Unity sees each value the moment Bonsai emits it, with a timestamp taken on the same clock (`Stopwatch`, i.e. QueryPerformanceCounter on Windows, unless you [replace it](docs/Hook-API.md#using-your-own-clock)).
 
 This is a fork of the unmaintained [emotional-cities/unity](https://github.com/emotional-cities/unity), updated for Unity 6 and Bonsai 2.9 (see [Changes from upstream](#changes-from-upstream)). The sample project is in `BonsaiInterface/` (Unity 6000.6, URP).
 
