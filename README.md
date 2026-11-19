@@ -42,8 +42,8 @@ To add it to **your own** Unity project, copy the folder `BonsaiInterface/Assets
 | `Runtime/` | `BonsaiWorkflow`, `BonsaiDispatcher`, `BonsaiWorkflowAsset`, `UnitySignal`: the runtime. They need the Bonsai DLLs. |
 | (top level) | The `BonsaiInstaller` asset. |
 | `Editor/` | `BonsaiWorkflowSnapshotSync` (rewrites `x.bonsai.asset` whenever `x.bonsai` is saved) and `BonsaiEditorMenu`: the **Bonsai** menu. Editor-only, so player builds don't include them. |
-| `Installer/` | `BonsaiInstaller` and its inspector, `BonsaiDllCheck`. In their own Editor-only assembly with no Bonsai references, so they compile even before any Bonsai DLL is in the project. |
-| `RequiredDlls.txt` | The DLLs your workflows need (see [Checking the DLLs](#checking-the-dlls)). |
+| `Installer/` | `BonsaiInstaller` and its inspector, `BonsaiDllCheck`, `RequiredDllsGenerator`. In their own Editor-only assembly with no Bonsai references, so they compile even before any Bonsai DLL is in the project. |
+| `RequiredDlls.txt` | The DLLs your workflows need, generated from the workflows (see [Checking the DLLs](#checking-the-dlls)). |
 
 > :warning: The project doesn't ship `Bonsai.Core.dll`, so the first time you open it Unity reports compile errors and asks whether to enter **Safe Mode**.
 > Choose **Ignore** (or click **Exit Safe Mode** if it already opened in Safe Mode) and continue with the steps below; consolidating the packages resolves the errors.
@@ -55,7 +55,7 @@ Once the import has completed, navigate to the Bonsai folder in Assets and locat
 - **Bonsai Path** shows the install the interface will use. It is filled in automatically from the first install found: a path set here, then `%LOCALAPPDATA%\Bonsai`, then `%ProgramFiles%\Bonsai`, then a portable copy inside the project. Type a path or use **Locate install...** to pin a specific install; clear the field to search again.
 - The box under it reports the [DLL check](#checking-the-dlls): all present, missing (red) or a different version (yellow).
 - **Launch Bonsai** opens the Bonsai editor for the install shown above.
-- **Consolidate packages** copies the libraries required to run a Bonsai process from a Unity instance out of the Bonsai environment and into `Assets/Packages`. Editor-only assemblies (Bonsai.Editor, Bonsai.Design and anything built on it, WebView2, DockPanelSuite, ScintillaNET) are skipped, since Unity cannot load them. Perform this step after importing any new packages in the Bonsai editor.
+- **Consolidate packages** copies the libraries required to run a Bonsai process from a Unity instance out of the Bonsai environment and into `Assets/Packages`. Editor-only assemblies (Bonsai.Editor, Bonsai.Design and anything built on it, WebView2, DockPanelSuite, ScintillaNET) are skipped, since Unity cannot load them. Perform this step after importing any new packages in the Bonsai editor. It also updates `RequiredDlls.txt` to the versions it copied.
 - Packages with **known compatibility problems** in Unity (`Bonsai.BonVision`, `Bonsai.VR`, `Bonsai.Audio`, `Bonsai.Shaders` and their sub-assemblies) are **not copied**: Consolidate packages logs an error for each and lists them in the completion dialog. If a workflow needs one, put the DLL in `Assets/Packages` by hand; nothing already there is deleted automatically. The list is `KnownProblemAssemblies` in `BonsaiInstallerEditor.cs`.
 - **Download latest** and **Install portable copy** are only needed when no install was found. They fetch the most recent Bonsai release and set up a portable environment in the root project folder. Close the Bonsai editor after the install step to complete it.
 
@@ -84,7 +84,13 @@ A missing DLL does **not** stop a workflow from loading. Bonsai loads every node
 | Player build | Build fails | Warning |
 | BonsaiInstaller inspector | Red box | Yellow box |
 
-Each line of `RequiredDlls.txt` is `<dll> <version> <comment>`, with versions as `major.minor.build`. The shipped list covers the samples (`Bonsai.Core` and the four `System.Reactive` DLLs). When your workflow uses another Bonsai package, add its DLL and anything it references that isn't part of .NET or Unity.
+Each line of `RequiredDlls.txt` is `<dll> <version> <needed by>`, with versions as `major.minor.build`. You don't edit it: `RequiredDllsGenerator` writes it from the assemblies each `.bonsai` file declares (`xmlns:ard="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino"`), plus everything those DLLs reference that is a Bonsai package. It runs:
+
+- when a workflow is imported, moved or deleted. This keeps the versions already listed, so a computer with older DLLs still gets the warning;
+- after **Consolidate packages**, taking the versions just copied;
+- from **Bonsai › Update RequiredDlls.txt**, also taking the versions in `Assets/Packages`.
+
+Dependencies are read from the DLLs in `Assets/Packages`. Before they are consolidated (in a fresh clone), the dependencies already listed are kept. DLLs that only your own scripts use go in the **Added by hand** section at the end of the file, which is never rewritten. A missing one shows up as a compile error anyway.
 
 # Quick start
 
@@ -173,7 +179,8 @@ Changes from [emotional-cities/unity](https://github.com/emotional-cities/unity)
 | Installer, its inspector and the DLL check moved to an Editor-only assembly with no references | With everything in one assembly, a fresh clone (no DLLs) failed to compile, so the installer that fixes it was unreachable. Keep `Installer/` free of `Bonsai.*` references. |
 | `BonsaiEditorMenu` moved to `Editor/` | It uses `UnityEditor`, which broke player builds. |
 | New: `BonsaiDllCheck` + `RequiredDlls.txt` | A missing DLL silently turns nodes into proxies that do nothing; now it warns, errors at Play, and blocks builds. |
-| Asset menu: handles Cancel, writes next to the `.bonsai` file, **Overwrite** updates in place | Upstream threw on Cancel and refused to replace an existing asset; recreating it would change its GUID and break scene references. |
+| New: `.bonsai.asset` files are regenerated automatically on every save (`BonsaiWorkflowSnapshotSync`), in place so GUIDs survive | Users forgot the **Create asset / Overwrite** step after editing a workflow, so Unity ran an old copy. **Bonsai › Generate workflow asset** remains for a manual refresh and for workflows outside the project, handles Cancel and updates in place. |
+| New: `RequiredDlls.txt` is generated from the workflows (`RequiredDllsGenerator`) | Kept by hand, the list fell behind the workflows (the Arduino sample's DLLs were missing from it). |
 | `OnDestroy` no longer throws when the workflow never started; new `StopWorkflow()` | Disposing a null subscription threw a `NullReferenceException`. |
 | `BonsaiDispatcher` clears its queue, and `BonsaiWorkflow` its registered hooks, when Play starts again | With *Enter Play Mode Options* skipping the domain reload, old callbacks were delivered to the new session and every hook was applied twice. |
 | Workflow errors are logged with `Debug.LogError` | They were plain `Debug.Log` lines and easy to miss. |

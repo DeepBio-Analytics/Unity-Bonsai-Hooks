@@ -21,7 +21,7 @@ Traps found while running Bonsai 2.9 workflows inside Unity 6, with their fixes.
 
 Bonsai loads each node from an assembly it can't find as a *proxy*: same type name, no properties, does nothing. The workflow builds and runs. The only visible symptom is a Unity-side override failing (`SetNodeProperty` logs `Bonsai.IO.CsvWriter has no settable property FileName`).
 
-**Fix:** list every DLL in `Assets/Bonsai/RequiredDlls.txt`, and run **Consolidate packages**. `BonsaiDllCheck` then warns at reload, errors at Play and fails builds when one is missing (see [Checking the DLLs](../README.md#checking-the-dlls)).
+**Fix:** run **Consolidate packages**. `RequiredDllsGenerator` keeps `Assets/Bonsai/RequiredDlls.txt` in step with the workflows, and `BonsaiDllCheck` warns at reload, errors at Play and fails builds when a DLL on it is missing (see [Checking the DLLs](../README.md#checking-the-dlls)). Commit the list, so other computers are checked against it.
 
 ## Hooks bind the wrong node
 

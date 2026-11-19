@@ -8,6 +8,8 @@
     "Bonsai.IO.CsvWriter has no settable property FileName". This check names the missing DLLs
     instead: as a warning when scripts reload, as an error when entering Play mode, and by failing
     player builds. The BonsaiInstaller inspector shows the same result.
+
+    The list itself is written by RequiredDllsGenerator from the project's workflows.
 */
 
 using System;
@@ -132,7 +134,8 @@ public static class BonsaiDllCheck
         return result;
     }
 
-    static void Log(Result result, bool asError)
+    /// <summary>Logs a result's problems, if any, as warnings or (with <paramref name="asError"/>) errors.</summary>
+    internal static void Log(Result result, bool asError)
     {
         if (result.HasErrors)
         {

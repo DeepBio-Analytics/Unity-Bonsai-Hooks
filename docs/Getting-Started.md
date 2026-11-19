@@ -254,21 +254,16 @@ Bonsai's DLLs are **not** stored in Git or in the ZIP. On each new computer:
 2. Open the project in Unity (step 5).
 3. Consolidate packages (step 6).
 
-Hardware settings such as **serial port names** (`COM3`, `COM5`) are saved inside the workflow and usually differ between computers. Open the workflow in Bonsai on the new computer, fix the port names, save, and refresh the asset (step 12). A wrong port shows up as an "access denied" or "port does not exist" error in the Console.
+Hardware settings such as **serial port names** (`COM3`, `COM5`) are saved inside the workflow and usually differ between computers. Open the workflow in Bonsai on the new computer, fix the port names and save (step 12). A wrong port shows up as an "access denied" or "port does not exist" error in the Console.
 
 ### If your workflow uses more Bonsai packages
 
-The sample project only checks for the files the samples need. When your workflow uses another package (Arduino, cameras, file writing...):
+When your workflow uses another package (Arduino, cameras, file writing...):
 
 1. Install it in Bonsai (**Manage packages**).
 2. Consolidate packages again (step 6).
-3. Add the package's DLL to **Assets › Bonsai › RequiredDlls.txt** (open it with Notepad), one line each, for example:
-   ```
-   Bonsai.Arduino.dll                   2.9.0      my workflow (Arduino)
-   ```
-   The version is the package version shown in Bonsai's package manager. This makes Unity warn you on any computer where the file is missing, instead of the nodes silently doing nothing.
 
-Not sure which packages a workflow uses? Open the `.bonsai` file in Notepad. The lines near the top that contain `assembly=` name them, for example `assembly=Bonsai.Arduino` means `Bonsai.Arduino.dll`.
+That's all. Unity keeps a list of the files your workflows need, **Assets › Bonsai › RequiredDlls.txt**, and updates it by itself whenever you save a workflow and after Consolidate packages. On any computer where one of those files is missing, Unity warns you instead of the nodes silently doing nothing. Commit the list along with your workflow, so the other computers know what to expect.
 
 ## Next steps
 

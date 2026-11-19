@@ -19,7 +19,8 @@ using UnityEngine;
 /// x64 native library into <c>Assets/Packages</c>, skipping the editor-only assemblies (Bonsai.Editor,
 /// Bonsai.Design and the WinForms/WPF/WebView2 libraries) that Unity can't load. It also refuses the
 /// assemblies in <c>KnownProblemAssemblies</c> (BonVision, VR, Audio, Shaders), logging an error for each.
-/// Run it after adding packages in Bonsai.
+/// Run it after adding packages in Bonsai. It then updates <c>RequiredDlls.txt</c> (<see cref="RequiredDllsGenerator"/>)
+/// to the versions just copied.
 /// Adapted from the unmaintained emotional-cities/unity package (https://github.com/emotional-cities/unity)
 /// and fixed for Bonsai 2.9; see docs/developer/Bonsai-Internals.md.
 /// </remarks>
@@ -60,7 +61,9 @@ public class BonsaiInstallerEditor : Editor
         dllCheck = BonsaiDllCheck.Run();
     }
 
-    static bool IsEditorOnly(string filePath)
+    /// <summary>True for the Bonsai editor's own assemblies, which Unity can't load and Consolidate never copies.</summary>
+    /// <param name="filePath">A DLL's path or file name.</param>
+    internal static bool IsEditorOnly(string filePath)
     {
         var name = Path.GetFileNameWithoutExtension(filePath);
         if (EditorOnlyPrefixes.Any(x => name.StartsWith(x, StringComparison.OrdinalIgnoreCase))) return true;
@@ -70,7 +73,9 @@ public class BonsaiInstallerEditor : Editor
         return EditorOnlyAssemblies.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    static bool IsKnownProblem(string filePath)
+    /// <summary>True for assemblies with known problems in Unity (<c>KnownProblemAssemblies</c>), which Consolidate refuses.</summary>
+    /// <param name="filePath">A DLL's path or file name.</param>
+    internal static bool IsKnownProblem(string filePath)
     {
         var name = Path.GetFileNameWithoutExtension(filePath);
         return KnownProblemAssemblies.Any(x =>
@@ -78,27 +83,26 @@ public class BonsaiInstallerEditor : Editor
             name.StartsWith(x + ".", StringComparison.OrdinalIgnoreCase));
     }
 
-    string RootPath()
+    static string RootPath()
     {
         return Application.dataPath.Replace("/Assets", "");
     }
 
-    string PortablePath()
+    static string PortablePath()
     {
         return RootPath() + "/Bonsai";
     }
 
-    string ArchivePath()
+    static string ArchivePath()
     {
         return RootPath() + "/Bonsai.zip";
     }
 
     // Install locations in priority order: the path set on the asset, the per-user install written
     // by the Bonsai installer, a machine-wide install, then a portable copy inside the project.
-    IEnumerable<string> CandidatePaths()
+    static IEnumerable<string> CandidatePaths(string pinnedPath)
     {
-        var installer = (BonsaiInstaller)target;
-        if (!string.IsNullOrEmpty(installer.BonsaiPath)) yield return installer.BonsaiPath;
+        if (!string.IsNullOrEmpty(pinnedPath)) yield return pinnedPath;
         yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bonsai");
         yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Bonsai");
         yield return PortablePath();
@@ -113,7 +117,22 @@ public class BonsaiInstallerEditor : Editor
 
     string ResolveInstallPath()
     {
-        return CandidatePaths().FirstOrDefault(IsInstall);
+        return FindInstall(((BonsaiInstaller)target).BonsaiPath);
+    }
+
+    /// <summary>The Bonsai install this project uses, searched as the inspector does; null if there is none.</summary>
+    /// <param name="pinnedPath">The path set on the installer asset, or null to search the standard locations only.</param>
+    internal static string FindInstall(string pinnedPath)
+    {
+        return CandidatePaths(pinnedPath).FirstOrDefault(IsInstall);
+    }
+
+    /// <summary>As <see cref="FindInstall(string)"/>, with the path pinned on the project's installer asset, if any.</summary>
+    internal static string FindInstall()
+    {
+        string guid = AssetDatabase.FindAssets("t:BonsaiInstaller").FirstOrDefault();
+        var installer = guid == null ? null : AssetDatabase.LoadAssetAtPath<BonsaiInstaller>(AssetDatabase.GUIDToAssetPath(guid));
+        return FindInstall(installer == null ? null : installer.BonsaiPath);
     }
 
     static string InstallVersion(string installPath)
@@ -252,11 +271,18 @@ public class BonsaiInstallerEditor : Editor
         }
 
         AssetDatabase.Refresh();
+
+        // Bring the DLL list up to date with the new files. DLLs copied for the first time are only loaded
+        // after Unity's next script reload, and their dependencies can't be read until then, so the list is
+        // updated again after that reload.
+        string listChange = RequiredDllsGenerator.Update(installPath);
+        RequiredDllsGenerator.UpdateAfterNextReload();
+
         dllCheck = BonsaiDllCheck.Run();
         var flaggedNote = flagged.Count == 0
             ? ""
             : $"\n\nERROR: not copied (known Unity compatibility issues). Remove these packages from the Bonsai environment:\n{string.Join("\n", flagged)}";
-        EditorUtility.DisplayDialog("Bonsai", $"Package consolidation complete. Copied {copied.Count} files, skipped {skipped}. See debug console for details.\n\n{dllCheck.Summary()}{flaggedNote}", "OK");
+        EditorUtility.DisplayDialog("Bonsai", $"Package consolidation complete. Copied {copied.Count} files, skipped {skipped}. See debug console for details.\n\n{listChange}\n\n{dllCheck.Summary()}{flaggedNote}", "OK");
     }
 
     Process RunBonsai(string installPath, EventHandler onExit)

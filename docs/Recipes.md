@@ -83,7 +83,7 @@ To show two subjects, add the script twice; the labels overlap, so this is only 
 2. In Bonsai, install the **Bonsai - Arduino Library** package (**Manage packages**, search `Arduino`).
 3. Build: **AnalogInput** → **PublishSubject** (Name `Sensor`).
 4. Select **AnalogInput**. Set **PortName** to your Arduino's port (`COM3`, for example; Windows Device Manager › Ports shows it) and **Pin** to the analog pin (0 for A0).
-5. Save, then in Unity: consolidate packages, add `Bonsai.Arduino.dll` to `RequiredDlls.txt` ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)), and create or overwrite the workflow asset.
+5. Save into **Assets**, then in Unity consolidate packages ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
 
 `AnalogInput` sends whole numbers from 0 to 1023.
 
@@ -272,7 +272,7 @@ Some Bonsai nodes, such as **Timer**, read a property only when the workflow sta
 
 **What it does:** each time you press Play, creates a folder named with the date and time (for example `C:\Data\2026-11-02_14-30-05`) and makes every **CsvWriter** in the workflow save into it as `bonsai.csv`. Without this, every run writes wherever the workflow says, and may overwrite the last one.
 
-**In Bonsai:** your workflow has a **CsvWriter** (package **Bonsai - System Library**) on the main level. Its own FileName doesn't matter; Unity replaces it. Add `Bonsai.System.dll` to `RequiredDlls.txt` ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
+**In Bonsai:** your workflow has a **CsvWriter** (package **Bonsai - System Library**) on the main level. Its own FileName doesn't matter; Unity replaces it. Consolidate packages after installing the package ([how](Getting-Started.md#if-your-workflow-uses-more-bonsai-packages)).
 
 **Script name:** `SaveBonsaiCsvToFolder`
 

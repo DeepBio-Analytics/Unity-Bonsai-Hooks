@@ -6,8 +6,8 @@ Ideas for integrating Unity more deeply with Bonsai and the packages around it. 
 
 | Status | Entries |
 |---|---|
-| Built | [A3](#a3-unity-to-bonsai-subjects), [A6](#a6-reach-nested-nodes) |
-| Partly built | [A4](#a4-externalized-properties-in-the-inspector), [A5](#a5-generate-requireddllstxt-from-the-workflow), [A7](#a7-workflow-lifecycle-and-errors-in-unity), [A10](#a10-bonsai-environments-and-pinned-packages), [A12](#a12-built-players) |
+| Built | [A1](#a1-keep-the-workflow-asset-in-sync-automatically), [A3](#a3-unity-to-bonsai-subjects), [A5](#a5-generate-requireddllstxt-from-the-workflow), [A6](#a6-reach-nested-nodes) |
+| Partly built | [A4](#a4-externalized-properties-in-the-inspector), [A7](#a7-workflow-lifecycle-and-errors-in-unity), [A10](#a10-bonsai-environments-and-pinned-packages), [A12](#a12-built-players) |
 | New task | [A14](#a14-unity-created-subjects) (the part of A3 not built) |
 
 ## Recommended order
@@ -16,7 +16,7 @@ If only a few get built, these give the most for the least:
 
 1. ~~**[Import `.bonsai` files directly](#a1-keep-the-workflow-asset-in-sync-automatically)** (S).~~ Built.
 2. **[No-code Inspector components](#a2-no-code-inspector-components)** (M). Users connect subjects to scene actions without writing scripts; most of the [Recipes](Recipes.md) become components.
-3. **[Generate `RequiredDlls.txt` from the workflow](#a5-generate-requireddllstxt-from-the-workflow)** (S). The DLL list stays right without anyone editing it.
+3. ~~**[Generate `RequiredDlls.txt` from the workflow](#a5-generate-requireddllstxt-from-the-workflow)** (S).~~ Built.
 4. **[Unity-created subjects](#a14-unity-created-subjects)** (M). Finishes A3: Unity creates the subject itself, so a workflow doesn't have to declare it first.
 5. **[Harp clock synchronization](#b2-harp)** (M). Puts Unity's events on the same sub-millisecond clock as Harp, ONIX and other rig hardware.
 
@@ -66,11 +66,14 @@ Values need converting from boxed `object` to the event's type; a shared `TryCon
 
 **Gives:** the DLL check stays correct without hand-editing.
 
-**Status: partly built.** The check itself exists: `RequiredDlls.txt` is read by `BonsaiDllCheck`, which warns in the editor and fails player builds. The list is still edited by hand.
+**Status: built.** `RequiredDllsGenerator` (in the Installer assembly, so it runs before the bridge compiles) reads the `clr-namespace:...;assembly=` declarations of every `.bonsai` file and snapshot in `Assets/`. It follows each DLL's references (`Assembly.GetReferencedAssemblies` on the copies Unity loaded from `Assets/Packages`) for as long as they are Bonsai packages, meaning in `Assets/Packages` or listed in the install's `Bonsai.config`. It writes the list with the consolidated versions. It runs on workflow import, move or delete, after Consolidate (and again after the reload that loads new DLLs), and from **Bonsai › Update RequiredDlls.txt**. Design points:
 
-**How:** every `.bonsai` file declares the assemblies it uses in its header (`xmlns:ard="clr-namespace:Bonsai.Arduino;assembly=Bonsai.Arduino"`). Read those from every workflow asset in the project, resolve dependencies from the install's `Bonsai.config` and the DLLs' references (`AssemblyName.GetReferencedAssemblies`), and write the list with versions from the consolidated files. Run it after Consolidate and on import (A1).
+- **Versions are pinned.** Import-time runs keep the versions already listed, so a computer with older DLLs still gets the warning. Consolidate and the menu take the local versions and report each change.
+- **Missing DLLs don't shrink the list.** The dependencies of a DLL that isn't loaded can't be read, so the ones previously listed for it are kept. If nothing else changed, the file isn't rewritten: a fresh clone leaves it byte-identical.
+- **Hand section.** Everything from `# Added by hand` to the end is copied unchanged, for DLLs only scripts use.
+- Editor-only and known-problem assemblies are never listed; a workflow that uses one gets a warning instead. Non-package references (`mscorlib`, `System.Windows.Forms`) are noted in a comment.
 
-**Effort:** S.
+Native libraries (`OpenCV`, `PortAudio`) are not covered: they have no assembly references to follow.
 
 ### A6. Reach nested nodes
 

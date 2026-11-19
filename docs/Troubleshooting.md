@@ -41,14 +41,14 @@ On a fresh project, `Bonsai.Core.dll` is missing, so Unity reports compile error
 3. Click **Consolidate packages** and wait for **Package consolidation complete**.
 4. Read the box in the Inspector. If it still lists missing DLLs, the package that contains them isn't installed in the Bonsai shown under **Bonsai Path**. Repeat step 1 for that install.
 
-The list of files Unity checks is **Assets › Bonsai › RequiredDlls.txt**. If the message names a file your workflow doesn't use any more, delete that line from the list.
+The list of files Unity checks is **Assets › Bonsai › RequiredDlls.txt**, which Unity writes from your workflows. If the message names a file your workflow doesn't use any more, click **Bonsai › Update RequiredDlls.txt**. A line in its **Added by hand** section at the end is never removed automatically; delete it there yourself.
 
 ## Different DLL versions
 
 The files in `Assets/Packages` are a different version from the one in `RequiredDlls.txt`. Usually Bonsai was updated on this computer, or the list is out of date. It is a warning: things may still work.
 
 - If this computer's Bonsai should match the others, install the version named in the message (Bonsai: **Manage packages** › **Installed**, pick the version), then consolidate again.
-- If everyone has moved to the new version, open `RequiredDlls.txt` in Notepad and change the version on that line.
+- If everyone has moved to the new version, consolidate packages (or click **Bonsai › Update RequiredDlls.txt**). The list then takes the versions in `Assets/Packages`; commit it so the other computers are checked against them. Saving a workflow does **not** change the versions, so the warning can't disappear by accident.
 
 ## Bonsai not found
 
