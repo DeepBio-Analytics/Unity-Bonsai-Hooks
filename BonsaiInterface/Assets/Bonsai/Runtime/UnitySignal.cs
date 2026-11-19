@@ -40,13 +40,13 @@ public sealed class UnitySignal<T> : Source<T>
     /// that does slow work on a signal sent from the main thread should start with an <c>ObserveOn</c>.
     /// </summary>
     /// <param name="value">The value the workflow receives.</param>
-    /// <returns>The <see cref="System.Diagnostics.Stopwatch"/> reading taken just before the value was handed over, for logging.</returns>
+    /// <returns>The <see cref="BonsaiClock"/> reading taken just before the value was handed over, for logging.</returns>
     public long Send(T value)
     {
         // Rx subjects expect one OnNext at a time; the lock keeps that true when two threads send at once.
         lock (gate)
         {
-            long sent = System.Diagnostics.Stopwatch.GetTimestamp();
+            long sent = BonsaiClock.Now();
             subject.OnNext(value);
             return sent;
         }

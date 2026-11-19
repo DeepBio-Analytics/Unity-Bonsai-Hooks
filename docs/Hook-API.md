@@ -49,7 +49,7 @@ void Awake()
 | `action` | `Action<object>`, or `Action<object, long>` to also get the emission time. |
 | `groupPath` | Optional. Null for the top level, or a group's display name (`/` between nested groups). See [Hooks inside groups](#hooks-inside-groups). |
 
-The action runs on Unity's main thread at the start of the next `Update` or `LateUpdate` after the node emits, whichever comes first, via `BonsaiDispatcher` (it runs before other scripts). For a handler that can't wait for the frame, see [`InjectImmediateSubscription`](#injectimmediatesubscription-bonsai-to-unity-at-once). The `long` is a `System.Diagnostics.Stopwatch` timestamp (QueryPerformanceCounter ticks on Windows) taken **on Bonsai's thread at the moment of emission**, so it is not delayed by the frame. Convert with `Stopwatch.Frequency`. Log the raw ticks if you need to align with other clocks later.
+The action runs on Unity's main thread at the start of the next `Update` or `LateUpdate` after the node emits, whichever comes first, via `BonsaiDispatcher` (it runs before other scripts). For a handler that can't wait for the frame, see [`InjectImmediateSubscription`](#injectimmediatesubscription-bonsai-to-unity-at-once). The `long` is a [`BonsaiClock`](#using-your-own-clock) timestamp (by default `Stopwatch`, i.e. QueryPerformanceCounter ticks on Windows) taken **on Bonsai's thread at the moment of emission**, so it is not delayed by the frame. Convert with `Stopwatch.Frequency`. Log the raw ticks if you need to align with other clocks later.
 
 **Unbox defensively.** Values arrive boxed as `object`. The dispatcher catches and logs an exception from one action, so the other actions queued in that frame still run, but the failed handler did nothing. Check the type (`if (value is int port)`) and log and skip anything else.
 
@@ -99,7 +99,7 @@ void Awake()
 long sentTicks = cueOnset.Send(armedPort);
 ```
 
-- `UnitySignal<T>` is a `Source<T>` Unity fires by hand. `Send` pushes the value into the workflow **now, on the calling thread**, with no queue and no frame of delay, and returns the `Stopwatch` timestamp taken just before, for logging. It is safe from any thread.
+- `UnitySignal<T>` is a `Source<T>` Unity fires by hand. `Send` pushes the value into the workflow **now, on the calling thread**, with no queue and no frame of delay, and returns the [`BonsaiClock`](#using-your-own-clock) timestamp taken just before, for logging. It is safe from any thread.
 - At start `BonsaiWorkflow` adds two nodes next to the subject's declaration, a source for the signal and a `MulticastSubject` (the node Bonsai uses to push into a subject by name). The workflow file is untouched, and opened in Bonsai alone the subject is just silent.
 - A missing subject logs an error and the rest of the workflow runs without the signal. A subject whose type differs from the signal's makes the workflow fail to build.
 - Downstream nodes run on the thread that called `Send` until the workflow moves on (`ObserveOn`, `Delay`), so a slow branch fed from the main thread stalls the frame.
@@ -181,6 +181,21 @@ bool running = workflow.IsRunning;
 | `OnError(string)` | a node fails while building or running; the argument is that node's display name, or `""` if Bonsai doesn't name one |
 
 An error ends the running workflow, so `Restart()` is the way to run it again; `StartWorkflow` on a workflow that already ran logs an error and does nothing, because building changes the graph. Hooks registered in `Awake` are applied again by `Restart`. `StopWorkflow` is safe to call when it never started or has already stopped; `OnDestroy` calls it. Whether the workflow survives a failure is the workflow's business (`Catch`, `Retry`); these events only report it.
+
+## Using your own clock
+
+Every timestamp the package hands out (the `long` given to `InjectSubscription` handlers and returned by `UnitySignal.Send`) comes from `BonsaiClock.Now`, a `Func<long>` that defaults to `Stopwatch.GetTimestamp`. A project that keeps its own session clock can point it there, so these timestamps come from the same place as the rest of its logs:
+
+```csharp
+static class BonsaiClockBinding
+{
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void Bind() => BonsaiClock.Now = () => MyClock.Now;
+}
+```
+
+Set it once, before any workflow starts; `BeforeSceneLoad` runs before every `Awake`. It is read on the thread that emits the value, so the replacement must be safe from any thread, must not call the Unity API, and should not allocate. Keep it at `Stopwatch.Frequency` ticks per second if you convert with that.
+
 
 ## Threads
 

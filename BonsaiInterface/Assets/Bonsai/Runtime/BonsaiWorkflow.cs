@@ -296,7 +296,7 @@ public class BonsaiWorkflow : MonoBehaviour
                 // not run the action until the next frame
                 inspect.Output.Merge().Subscribe(unit =>
                 {
-                    var timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+                    var timestamp = BonsaiClock.Now();
 
                     if (!subscription.Immediate)
                     {
@@ -557,12 +557,12 @@ public class BonsaiWorkflow : MonoBehaviour
 
     /// <summary>
     /// As <see cref="InjectSubscription(string, Type, Action{object}, string)"/>, but the action also receives the
-    /// Stopwatch timestamp (QueryPerformanceCounter ticks) taken on Bonsai's thread the moment the node
+    /// <see cref="BonsaiClock"/> timestamp (QueryPerformanceCounter ticks by default) taken on Bonsai's thread the moment the node
     /// emitted, rather than when the main thread runs the action (up to a frame later).
     /// </summary>
     /// <param name="targetNode">The node's display name in the workflow.</param>
     /// <param name="targetType">The node's exact deserialized type.</param>
-    /// <param name="action">Receives each emitted value, boxed, and its emission time in <see cref="System.Diagnostics.Stopwatch"/> ticks.</param>
+    /// <param name="action">Receives each emitted value, boxed, and its emission time in <see cref="BonsaiClock"/> ticks.</param>
     /// <param name="groupPath">Null for the top level, or a <c>GroupWorkflow</c>'s name (<c>/</c> for nested groups) to search inside it.</param>
     public void InjectSubscription(string targetNode, Type targetType, Action<object, long> action, string groupPath = null)
     {
@@ -581,7 +581,7 @@ public class BonsaiWorkflow : MonoBehaviour
     /// </remarks>
     /// <param name="targetNode">The node's display name in the workflow.</param>
     /// <param name="targetType">The node's exact deserialized type.</param>
-    /// <param name="action">Receives each emitted value, boxed, and its emission time in <see cref="System.Diagnostics.Stopwatch"/> ticks.</param>
+    /// <param name="action">Receives each emitted value, boxed, and its emission time in <see cref="BonsaiClock"/> ticks.</param>
     /// <param name="groupPath">Null for the top level, or a <c>GroupWorkflow</c>'s name (<c>/</c> for nested groups) to search inside it.</param>
     public void InjectImmediateSubscription(string targetNode, Type targetType, Action<object, long> action, string groupPath = null)
     {
